@@ -1,8 +1,8 @@
 package result
 
 import (
-	"github.com/arcane-craft/sugar"
 	"github.com/arcane-craft/sugar/option"
+	"github.com/arcane-craft/sugar/syntax/question"
 )
 
 type Result[T any] interface {
@@ -16,13 +16,13 @@ type Result[T any] interface {
 	UnwrapErr() error
 	UnwrapOr(def T) T
 
-	sugar.Question[T]
+	question.Question[T]
 }
 
 type rOk[T any] struct {
 	v T
 
-	sugar.QuestionImpl[T]
+	question.QuestionImpl[T]
 }
 
 func (rOk[T]) IsOk() bool {
@@ -64,7 +64,7 @@ func (r rOk[T]) UnwrapOr(_ T) T {
 type rErr[T any] struct {
 	v error
 
-	sugar.QuestionImpl[T]
+	question.QuestionImpl[T]
 }
 
 func (rErr[T]) IsOk() bool {

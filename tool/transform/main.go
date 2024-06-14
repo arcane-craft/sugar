@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/arcane-craft/sugar/tool/transform/lib"
+	"github.com/arcane-craft/sugar/tool/transform/question"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -27,15 +29,15 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	err := TranslateSyntax(ctx, rootDir, true,
-		func(p *packages.Package) []*QuestionInstanceType {
-			return NewQuestionTypeInspector(p).InspectQuestionTypes()
+	err := lib.TranslateSyntax(ctx, rootDir, true,
+		func(p *packages.Package) []*question.QuestionInstanceType {
+			return question.NewQuestionTypeInspector(p).InspectQuestionTypes()
 		},
-		func(p *packages.Package, instTypes []*QuestionInstanceType) SyntaxInspector[QuestionSyntax] {
-			return NewQuestionSyntaxInspector(p, instTypes)
+		func(p *packages.Package, instTypes []*question.QuestionInstanceType) lib.SyntaxInspector[question.QuestionSyntax] {
+			return question.NewQuestionSyntaxInspector(p, instTypes)
 		},
-		func(info *FileInfo[QuestionSyntax], writer io.Writer) error {
-			return GenerateQuestionSyntax(info, writer)
+		func(info *lib.FileInfo[question.QuestionSyntax], writer io.Writer) error {
+			return question.GenerateQuestionSyntax(info, writer)
 		},
 	)
 	if err != nil {

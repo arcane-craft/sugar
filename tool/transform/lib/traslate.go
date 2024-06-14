@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"bytes"
@@ -37,10 +37,6 @@ func TranslateSyntax[Type, Syntax fmt.Stringer](
 					instTypes = append(instTypes, inpectTypes(dep)...)
 				}
 			}
-		}
-
-		for _, t := range instTypes {
-			fmt.Println(t)
 		}
 
 		var totalFiles []*FileInfo[Syntax]
@@ -109,12 +105,6 @@ func TranslateSyntax[Type, Syntax fmt.Stringer](
 				}()
 			}
 			totalFiles = append(totalFiles, files...)
-		}
-		for _, f := range totalFiles {
-			fmt.Printf("%s:\n", f.Path)
-			for _, s := range f.Syntax {
-				fmt.Printf("%s", s)
-			}
 		}
 		if len(buildFlags) <= 0 || len(totalFiles) > 0 {
 			finished = false

@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"fmt"
@@ -31,6 +31,15 @@ type SyntaxInspector[Syntax fmt.Stringer] interface {
 type Extent struct {
 	Start token.Position
 	End   token.Position
+}
+
+func (m Extent) String() string {
+	return fmt.Sprintf("%s-%s", m.Start, m.End)
+}
+
+func (m Extent) IsEmpty() bool {
+	var zero Extent
+	return m == zero
 }
 
 type PackageInspector[Syntax fmt.Stringer] struct {

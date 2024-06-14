@@ -1,4 +1,4 @@
-package sugar
+package question
 
 type Question[T any] interface {
 	Q() T

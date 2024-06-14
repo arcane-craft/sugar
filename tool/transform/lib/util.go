@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"crypto/sha256"
@@ -60,7 +60,7 @@ func ResetTypeStrPkgName(str string, imports map[string]string, currentPkg strin
 		} else if len(pkgPath) > 0 {
 			pkgName, ok := imports[pkgPath]
 			if !ok {
-				pkgName = GetRandPkgName(path.Base(pkgPath), pkgPath)
+				pkgName = GenPkgName(path.Base(pkgPath), pkgPath)
 				if adds == nil {
 					adds = map[string]string{}
 				}
@@ -80,12 +80,12 @@ func ResetTypePkgName(ty types.Type, imports map[string]string, currentPkg strin
 	return
 }
 
-func GetRandPkgName(prefix string, nameHint string) string {
+func GenPkgName(prefix string, nameHint string) string {
 	sum := sha256.Sum256([]byte(nameHint))
 	return prefix + "_" + strings.TrimRight(base32.HexEncoding.EncodeToString(sum[13:19]), "=")
 }
 
-func GetRandVarName(nameHint string) string {
+func GenVarName(prefix string, nameHint string) string {
 	sum := sha256.Sum256([]byte(nameHint))
-	return "var" + strings.TrimRight(base32.HexEncoding.EncodeToString(sum[13:19]), "=")
+	return prefix + strings.TrimRight(base32.HexEncoding.EncodeToString(sum[13:19]), "=")
 }

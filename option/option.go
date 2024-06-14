@@ -1,6 +1,8 @@
 package option
 
-import "github.com/arcane-craft/sugar"
+import (
+	"github.com/arcane-craft/sugar/syntax/question"
+)
 
 type Option[T any] interface {
 	IsSome() bool
@@ -9,13 +11,13 @@ type Option[T any] interface {
 	Unwrap() T
 	UnwrapOr(def T) T
 
-	sugar.Question[T]
+	question.Question[T]
 }
 
 type oSome[T any] struct {
 	v T
 
-	sugar.QuestionImpl[T]
+	question.QuestionImpl[T]
 }
 
 func (oSome[T]) IsSome() bool {
@@ -39,7 +41,7 @@ func (o oSome[T]) UnwrapOr(_ T) T {
 }
 
 type oNone[T any] struct {
-	sugar.QuestionImpl[T]
+	question.QuestionImpl[T]
 }
 
 func (oNone[T]) IsSome() bool {
