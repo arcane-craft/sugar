@@ -15,6 +15,10 @@ func GenBuildFlags(predicate bool) string {
 	return fmt.Sprintf("%s\n\n", BuildDirective(predicate))
 }
 
+func GenTmpBuildFlags(predicate bool) string {
+	return fmt.Sprintf("%s\n\n", TmpBuildDirective(predicate))
+}
+
 func GenImport(pkgName, pkgPath string) string {
 	if len(pkgName) <= 0 {
 		pkgName = "."
@@ -77,7 +81,7 @@ func GenerateSyntax[Syntax fmt.Stringer](info *FileInfo[Syntax], writer io.Write
 		return a.Old.Start.Offset - b.Old.Start.Offset
 	})
 
-	if _, err := writer.Write([]byte(GenBuildFlags(true))); err != nil {
+	if _, err := writer.Write([]byte(GenTmpBuildFlags(true))); err != nil {
 		return fmt.Errorf("writer.Write() failed: %w", err)
 	}
 	nextOffset := info.ImportExtent.End.Offset + 1

@@ -13,6 +13,7 @@ import (
 
 const (
 	prodBuildTag = "sugar_production"
+	tmpBuildTag  = "sugar_temp"
 )
 
 func BuildDirective(predicate bool) string {
@@ -21,6 +22,14 @@ func BuildDirective(predicate bool) string {
 		op = "!"
 	}
 	return fmt.Sprintf("//go:build %s%s", op, prodBuildTag)
+}
+
+func TmpBuildDirective(predicate bool) string {
+	var op string
+	if !predicate {
+		op = "!"
+	}
+	return fmt.Sprintf("//go:build %s%s", op, tmpBuildTag)
 }
 
 type SyntaxInspector[Syntax fmt.Stringer] interface {
@@ -58,7 +67,10 @@ func NewPackageInspector[Syntax fmt.Stringer](pkg *packages.Package, inpector Sy
 	for _, file := range pkg.Syntax {
 		for _, cg := range file.Comments {
 			for _, c := range cg.List {
-				if strings.Contains(c.Text, BuildDirective(false)) || strings.Contains(c.Text, BuildDirective(true)) {
+				if strings.Contains(c.Text, TmpBuildDirective(false)) ||
+					strings.Contains(c.Text, BuildDirective(false)) ||
+					strings.Contains(c.Text, TmpBuildDirective(true)) ||
+					strings.Contains(c.Text, BuildDirective(true)) {
 					fileName := pkg.Fset.Position(c.Pos()).Filename
 					buildFlags[fileName] = Extent{
 						Start: pkg.Fset.Position(c.Pos()),

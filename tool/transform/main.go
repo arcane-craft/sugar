@@ -3,13 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
 
 	"github.com/arcane-craft/sugar/tool/transform/lib"
 	"github.com/arcane-craft/sugar/tool/transform/question"
-	"golang.org/x/tools/go/packages"
 )
 
 func main() {
@@ -29,17 +27,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	err := lib.TranslateSyntax(ctx, rootDir, true,
-		func(p *packages.Package) []*question.QuestionInstanceType {
-			return question.NewQuestionTypeInspector(p).InspectQuestionTypes()
-		},
-		func(p *packages.Package, instTypes []*question.QuestionInstanceType) lib.SyntaxInspector[question.QuestionSyntax] {
-			return question.NewQuestionSyntaxInspector(p, instTypes)
-		},
-		func(info *lib.FileInfo[question.QuestionSyntax], writer io.Writer) error {
-			return question.GenerateQuestionSyntax(info, writer)
-		},
-	)
+	err := lib.TranslateSyntax(ctx, rootDir, true, question.NewTraslator())
 	if err != nil {
 		fmt.Println("translate delay syntax failed:", err)
 		return

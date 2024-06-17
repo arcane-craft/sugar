@@ -132,11 +132,12 @@ type QImplType struct {
 
 type QuestionSyntax struct {
 	Call    *QuestionCall
+	OuterFn string
 	RetType *QImplType
 }
 
 func (m QuestionSyntax) String() string {
-	return fmt.Sprintf("Call: %+v, RetType: %+v", m.Call, m.RetType)
+	return fmt.Sprintf("Call: %+v, OuterFn: %s, RetType: %+v", m.Call, m.OuterFn, m.RetType)
 }
 
 func (i *QuestionSyntaxInspector) Nodes() []ast.Node {
@@ -201,14 +202,17 @@ func (i *QuestionSyntaxInspector) InspectSyntax(n ast.Node, stack []ast.Node) (s
 	}
 	if exprExt != nil && len(stack) > 1 {
 		var retType *QImplType
+		var outerFn string
 	FindOuterFunc:
 		for idx := len(stack) - 2; idx >= 0; idx-- {
 			switch fn := stack[idx].(type) {
 			case *ast.FuncLit:
 				retType = i.InspectFuncType(fn.Type)
+				outerFn = i.pkg.TypesInfo.TypeOf(fn).String()
 				break FindOuterFunc
 			case *ast.FuncDecl:
 				retType = i.InspectFuncType(fn.Type)
+				outerFn = strings.Replace(i.pkg.TypesInfo.TypeOf(fn.Name).String(), "func", "func "+fn.Name.Name+"", 1)
 				break FindOuterFunc
 			}
 		}
@@ -317,6 +321,7 @@ func (i *QuestionSyntaxInspector) InspectSyntax(n ast.Node, stack []ast.Node) (s
 			}
 			syntax = &QuestionSyntax{
 				Call:    call,
+				OuterFn: outerFn,
 				RetType: retType,
 			}
 		}
@@ -328,8 +333,8 @@ func GenAssginStmt(assignVar, assignToken, call string) string {
 	return fmt.Sprintf("%s %s %s\n", assignVar, assignToken, call)
 }
 
-func GenErrorHandler(resultVar, retType string) string {
-	return fmt.Sprintf("if %s.IsErr() {\nreturn Err[%s](%s.UnwrapErr())\n}\n", resultVar, retType, resultVar)
+func GenErrorHandler(resultVar, retType, outerFn string) string {
+	return fmt.Sprintf("if %s.IsErr() {\nreturn Err[%s](fmt.Errorf(\"%s: %%w\", %s.UnwrapErr()))\n}\n", resultVar, retType, outerFn, resultVar)
 }
 
 func GenUnwrapStmt(assignVar, assignToken, receiverVar string) string {
@@ -366,7 +371,7 @@ func GenerateQuestionSyntax(info *lib.FileInfo[QuestionSyntax], writer io.Writer
 				}
 				result := GenAssginStmt(receiverVar, token.DEFINE.String(), callExpr)
 				if strings.HasSuffix(lib.GetNameFromTypeStr(syntax.Call.ExprType), "Result") {
-					result += GenErrorHandler(receiverVar, retType)
+					result += GenErrorHandler(receiverVar, retType, syntax.OuterFn)
 				} else {
 					result += GenNoneHandler(receiverVar, retType)
 				}
@@ -389,7 +394,7 @@ func GenerateQuestionSyntax(info *lib.FileInfo[QuestionSyntax], writer io.Writer
 				}
 				result := GenAssginStmt(receiverVar, token.DEFINE.String(), callExpr)
 				if strings.HasSuffix(lib.GetNameFromTypeStr(syntax.Call.ExprType), "Result") {
-					result += GenErrorHandler(receiverVar, retType)
+					result += GenErrorHandler(receiverVar, retType, syntax.OuterFn)
 				} else {
 					result += GenNoneHandler(receiverVar, retType)
 				}
@@ -419,7 +424,7 @@ func GenerateQuestionSyntax(info *lib.FileInfo[QuestionSyntax], writer io.Writer
 				}
 				result := GenAssginStmt(receiverVar, token.DEFINE.String(), callExpr)
 				if strings.HasSuffix(lib.GetNameFromTypeStr(syntax.Call.ExprType), "Result") {
-					result += GenErrorHandler(receiverVar, retType)
+					result += GenErrorHandler(receiverVar, retType, syntax.OuterFn)
 				} else {
 					result += GenNoneHandler(receiverVar, retType)
 				}
@@ -431,4 +436,21 @@ func GenerateQuestionSyntax(info *lib.FileInfo[QuestionSyntax], writer io.Writer
 		}
 		return ret, nil
 	})
+}
+
+type Traslator struct{}
+
+func NewTraslator() *Traslator {
+	return &Traslator{}
+}
+
+func (*Traslator) InpectTypes(p *packages.Package) []*QuestionInstanceType {
+	return NewQuestionTypeInspector(p).InspectQuestionTypes()
+}
+
+func (*Traslator) InspectSyntax(p *packages.Package, instTypes []*QuestionInstanceType) lib.SyntaxInspector[QuestionSyntax] {
+	return NewQuestionSyntaxInspector(p, instTypes)
+}
+func (*Traslator) Generate(info *lib.FileInfo[QuestionSyntax], writer io.Writer) error {
+	return GenerateQuestionSyntax(info, writer)
 }

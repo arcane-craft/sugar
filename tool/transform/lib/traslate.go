@@ -12,15 +12,20 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+type SyntaxTraslator[Type, Syntax fmt.Stringer] interface {
+	InpectTypes(p *packages.Package) []*Type
+	InspectSyntax(p *packages.Package, instTypes []*Type) SyntaxInspector[Syntax]
+	Generate(info *FileInfo[Syntax], writer io.Writer) error
+}
+
 func TranslateSyntax[Type, Syntax fmt.Stringer](
 	ctx context.Context, rootDir string, firstRun bool,
-	inpectTypes func(p *packages.Package) []*Type,
-	inspectSyntax func(p *packages.Package, instTypes []*Type) SyntaxInspector[Syntax],
-	generate func(info *FileInfo[Syntax], writer io.Writer) error,
+	traslator SyntaxTraslator[Type, Syntax],
 ) error {
 
 	var finished bool
 	var buildFlags []string
+	modifiedFiles := map[string]struct{}{}
 
 	for !finished {
 		finished = true
@@ -31,17 +36,17 @@ func TranslateSyntax[Type, Syntax fmt.Stringer](
 		}
 		var instTypes []*Type
 		for _, p := range pkgs {
-			instTypes = append(instTypes, inpectTypes(p)...)
+			instTypes = append(instTypes, traslator.InpectTypes(p)...)
 			for path, dep := range p.Imports {
 				if p.PkgPath != path {
-					instTypes = append(instTypes, inpectTypes(dep)...)
+					instTypes = append(instTypes, traslator.InpectTypes(dep)...)
 				}
 			}
 		}
 
 		var totalFiles []*FileInfo[Syntax]
 		for _, p := range pkgs {
-			files := NewPackageInspector(p, inspectSyntax(p, instTypes)).Inspect()
+			files := NewPackageInspector(p, traslator.InspectSyntax(p, instTypes)).Inspect()
 			for _, info := range files {
 				func() {
 					ext := filepath.Ext(info.Path)
@@ -58,13 +63,13 @@ func TranslateSyntax[Type, Syntax fmt.Stringer](
 					}
 					defer file.Close()
 
-					err = generate(info, file)
+					err = traslator.Generate(info, file)
 					if err != nil {
 						fmt.Println("generate code of", info.Path, "failed:", err)
 						return
 					}
 
-					if err = FormatCode(ctx, newFile, prodBuildTag); err != nil {
+					if err = FormatCode(ctx, newFile, tmpBuildTag); err != nil {
 						fmt.Println("format code of", newFile, "failed:", err)
 					}
 
@@ -77,17 +82,18 @@ func TranslateSyntax[Type, Syntax fmt.Stringer](
 							fmt.Println("rename file", newFile, "failed:", err)
 							return
 						}
+						modifiedFiles[info.Path] = struct{}{}
 					} else {
 						buf := bytes.NewBuffer(nil)
 						if info.BuildFlag == nil {
-							buf.Write([]byte(GenBuildFlags(false)))
+							buf.Write([]byte(GenTmpBuildFlags(false)))
 						}
 						bs, err := os.ReadFile(info.Path)
 						if err != nil {
 							fmt.Println("read file", info.Path, "failed:", err)
 							return
 						}
-						buf.Write(bs)
+						buf.Write(bytes.Replace(bs, []byte(prodBuildTag), []byte(tmpBuildTag), 1))
 						tmpOldFileNam := info.Path + ".old"
 						if err := os.WriteFile(tmpOldFileNam, buf.Bytes(), 0644); err != nil {
 							fmt.Println("write file", tmpOldFileNam, "failed:", err)
@@ -101,6 +107,7 @@ func TranslateSyntax[Type, Syntax fmt.Stringer](
 							fmt.Println("rename file", tmpOldFileNam, "failed:", err)
 							return
 						}
+						modifiedFiles[info.Path] = struct{}{}
 					}
 				}()
 			}
@@ -109,7 +116,17 @@ func TranslateSyntax[Type, Syntax fmt.Stringer](
 		if len(buildFlags) <= 0 || len(totalFiles) > 0 {
 			finished = false
 		}
-		buildFlags = []string{"-tags=" + prodBuildTag}
+		buildFlags = []string{"-tags=" + tmpBuildTag}
+	}
+	for f := range modifiedFiles {
+		content, err := os.ReadFile(f)
+		if err != nil {
+			return fmt.Errorf("os.ReadFile(): %w", err)
+		}
+		content = bytes.Replace(content, []byte(tmpBuildTag), []byte(prodBuildTag), 1)
+		if err := os.WriteFile(f, content, 0644); err != nil {
+			return fmt.Errorf("os.WriteFile() %w", err)
+		}
 	}
 	return nil
 }
