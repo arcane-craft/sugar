@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/arcane-craft/sugar/tool/transform/exception"
 	"github.com/arcane-craft/sugar/tool/transform/lib"
 	"github.com/arcane-craft/sugar/tool/transform/question"
 )
@@ -29,7 +30,13 @@ func main() {
 
 	err := lib.TranslateSyntax(ctx, rootDir, true, question.NewTraslator())
 	if err != nil {
-		fmt.Println("translate delay syntax failed:", err)
+		fmt.Println("translate question syntax failed:", err)
+		return
+	}
+
+	err = lib.TranslateSyntax(ctx, rootDir, false, exception.NewTraslator())
+	if err != nil {
+		fmt.Println("translate exception syntax failed:", err)
 		return
 	}
 }

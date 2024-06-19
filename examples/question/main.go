@@ -1,5 +1,3 @@
-//go:build !sugar_production
-
 package main
 
 import (
@@ -10,6 +8,11 @@ import (
 	. "github.com/arcane-craft/sugar/option"
 	. "github.com/arcane-craft/sugar/result"
 )
+
+func main() {
+	RunResultQuestion()
+	RunOptionQuestion()
+}
 
 type File struct{}
 
@@ -43,13 +46,14 @@ func Rename(oldpath, newpath string) Result[Empty] {
 	return Ok(Empty{})
 }
 
-func RunQuestion() Result[Empty] {
+func RunResultQuestion() Result[Empty] {
 	WriteFile("example.txt", []byte("Hello, World!"), 0644).Q()
 	data := ReadFile("example.txt").Q()
 	fmt.Println("content1:", string(data))
 	fmt.Println("content2:", string(ReadFile("example.txt").Q()))
 	if data := ReadFile("example.txt").Q(); len(data) > 0 {
 		fmt.Println("content1:", string(data))
+		WriteFile("example.txt", []byte("Hello, World!"), 0644).Q()
 	}
 	WriteFile("example.txt", ReadFile("example.txt").Q(), 0644).Q()
 	OpenFile("example.txt").Q().Close().Q()

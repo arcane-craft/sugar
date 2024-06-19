@@ -32,9 +32,12 @@ func TmpBuildDirective(predicate bool) string {
 	return fmt.Sprintf("//go:build %s%s", op, tmpBuildTag)
 }
 
-type SyntaxInspector[Syntax fmt.Stringer] interface {
+type SyntaxInspector[Syntax interface {
+	fmt.Stringer
+	comparable
+}] interface {
 	Nodes() []ast.Node
-	InspectSyntax(node ast.Node, stack []ast.Node) *Syntax
+	InspectSyntax(node ast.Node, stack []ast.Node) Syntax
 }
 
 type Extent struct {
@@ -42,16 +45,25 @@ type Extent struct {
 	End   token.Position
 }
 
-func (m Extent) String() string {
+func (m *Extent) String() string {
+	if m == nil {
+		return "<nil>"
+	}
 	return fmt.Sprintf("%s-%s", m.Start, m.End)
 }
 
-func (m Extent) IsEmpty() bool {
+func (m *Extent) IsEmpty() bool {
+	if m == nil {
+		return true
+	}
 	var zero Extent
-	return m == zero
+	return *m == zero
 }
 
-type PackageInspector[Syntax fmt.Stringer] struct {
+type PackageInspector[Syntax interface {
+	fmt.Stringer
+	comparable
+}] struct {
 	pkg           *packages.Package
 	imports       map[string]map[string]string
 	importExtents map[string]Extent
@@ -60,7 +72,10 @@ type PackageInspector[Syntax fmt.Stringer] struct {
 	inspector SyntaxInspector[Syntax]
 }
 
-func NewPackageInspector[Syntax fmt.Stringer](pkg *packages.Package, inpector SyntaxInspector[Syntax]) *PackageInspector[Syntax] {
+func NewPackageInspector[Syntax interface {
+	fmt.Stringer
+	comparable
+}](pkg *packages.Package, inpector SyntaxInspector[Syntax]) *PackageInspector[Syntax] {
 	imports := make(map[string]map[string]string)
 	importExtents := make(map[string]Extent)
 	buildFlags := make(map[string]Extent)
@@ -108,13 +123,16 @@ func NewPackageInspector[Syntax fmt.Stringer](pkg *packages.Package, inpector Sy
 	}
 }
 
-type FileInfo[Syntax fmt.Stringer] struct {
+type FileInfo[Syntax interface {
+	fmt.Stringer
+	comparable
+}] struct {
 	Path         string
 	BuildFlag    *Extent
 	PkgPath      string
 	Imports      map[string]string
 	ImportExtent Extent
-	Syntax       []*Syntax
+	Syntax       []Syntax
 }
 
 func (i *PackageInspector[Syntax]) Inspect() []*FileInfo[Syntax] {
@@ -139,7 +157,8 @@ func (i *PackageInspector[Syntax]) Inspect() []*FileInfo[Syntax] {
 	ins.WithStack(i.inspector.Nodes(),
 		func(node ast.Node, _ bool, stack []ast.Node) bool {
 			syntax := i.inspector.InspectSyntax(node, stack)
-			if syntax != nil {
+			var zero Syntax
+			if syntax != zero {
 				fileName := i.pkg.Fset.Position(node.Pos()).Filename
 				file := fileMap[fileName]
 				if file == nil {

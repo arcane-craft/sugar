@@ -12,13 +12,19 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-type SyntaxTraslator[Type, Syntax fmt.Stringer] interface {
-	InpectTypes(p *packages.Package) []*Type
-	InspectSyntax(p *packages.Package, instTypes []*Type) SyntaxInspector[Syntax]
+type SyntaxTraslator[Type, Syntax interface {
+	fmt.Stringer
+	comparable
+}] interface {
+	InpectTypes(p *packages.Package) []Type
+	InspectSyntax(p *packages.Package, instTypes []Type) SyntaxInspector[Syntax]
 	Generate(info *FileInfo[Syntax], writer io.Writer) error
 }
 
-func TranslateSyntax[Type, Syntax fmt.Stringer](
+func TranslateSyntax[Type, Syntax interface {
+	fmt.Stringer
+	comparable
+}](
 	ctx context.Context, rootDir string, firstRun bool,
 	traslator SyntaxTraslator[Type, Syntax],
 ) error {
@@ -34,7 +40,7 @@ func TranslateSyntax[Type, Syntax fmt.Stringer](
 		if err != nil {
 			return fmt.Errorf("load source packages failed: %w", err)
 		}
-		var instTypes []*Type
+		var instTypes []Type
 		for _, p := range pkgs {
 			instTypes = append(instTypes, traslator.InpectTypes(p)...)
 			for path, dep := range p.Imports {

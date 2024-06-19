@@ -39,7 +39,7 @@ type ReplaceBlock struct {
 	New string
 }
 
-func ReadExtent(reader io.ReaderAt, extent Extent) (string, error) {
+func ReadExtent(reader io.ReaderAt, extent *Extent) (string, error) {
 	bs := make([]byte, extent.End.Offset-extent.Start.Offset)
 	n, err := reader.ReadAt(bs, int64(extent.Start.Offset))
 	if err != nil {
@@ -51,7 +51,7 @@ func ReadExtent(reader io.ReaderAt, extent Extent) (string, error) {
 	return string(bs), nil
 }
 
-func ReadExtentList(reader io.ReaderAt, extents []Extent) ([]string, error) {
+func ReadExtentList(reader io.ReaderAt, extents []*Extent) ([]string, error) {
 	var ret []string
 	for _, e := range extents {
 		str, err := ReadExtent(reader, e)
@@ -63,7 +63,10 @@ func ReadExtentList(reader io.ReaderAt, extents []Extent) ([]string, error) {
 	return ret, nil
 }
 
-func GenerateSyntax[Syntax fmt.Stringer](info *FileInfo[Syntax], writer io.Writer,
+func GenerateSyntax[Syntax interface {
+	fmt.Stringer
+	comparable
+}](info *FileInfo[Syntax], writer io.Writer,
 	proc func(file *os.File, addImports map[string]string) ([]*ReplaceBlock, error)) error {
 	file, err := os.Open(info.Path)
 	if err != nil {

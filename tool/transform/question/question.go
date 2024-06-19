@@ -31,7 +31,10 @@ type QuestionInstanceType struct {
 	Name string
 }
 
-func (m QuestionInstanceType) String() string {
+func (m *QuestionInstanceType) String() string {
+	if m == nil {
+		return "<nil>"
+	}
 	return fmt.Sprintf("Name: %s", m.Name)
 }
 
@@ -136,7 +139,10 @@ type QuestionSyntax struct {
 	RetType *QImplType
 }
 
-func (m QuestionSyntax) String() string {
+func (m *QuestionSyntax) String() string {
+	if m == nil {
+		return "<nil>"
+	}
 	return fmt.Sprintf("Call: %+v, OuterFn: %s, RetType: %+v", m.Call, m.OuterFn, m.RetType)
 }
 
@@ -349,16 +355,16 @@ func GenNoneHandler(optionVar, retType string) string {
 	return fmt.Sprintf("if %s.IsNone() {\nreturn None[%s]()\n}\n", optionVar, retType)
 }
 
-func GenerateQuestionSyntax(info *lib.FileInfo[QuestionSyntax], writer io.Writer) error {
+func GenerateQuestionSyntax(info *lib.FileInfo[*QuestionSyntax], writer io.Writer) error {
 	return lib.GenerateSyntax(info, writer, func(file *os.File, addImports map[string]string) ([]*lib.ReplaceBlock, error) {
 		var ret []*lib.ReplaceBlock
 		for _, syntax := range info.Syntax {
 			if syntax.Call.AssignVar != nil {
-				assignVar, err := lib.ReadExtent(file, *syntax.Call.AssignVar)
+				assignVar, err := lib.ReadExtent(file, syntax.Call.AssignVar)
 				if err != nil {
 					return nil, fmt.Errorf("ReadExtent() failed: %w", err)
 				}
-				callExpr, err := lib.ReadExtent(file, *syntax.Call.Expr)
+				callExpr, err := lib.ReadExtent(file, syntax.Call.Expr)
 				if err != nil {
 					return nil, fmt.Errorf("ReadExtent() failed: %w", err)
 				}
@@ -381,7 +387,7 @@ func GenerateQuestionSyntax(info *lib.FileInfo[QuestionSyntax], writer io.Writer
 					New: result,
 				})
 			} else if syntax.Call.OuterStmt != nil {
-				callExpr, err := lib.ReadExtent(file, *syntax.Call.Expr)
+				callExpr, err := lib.ReadExtent(file, syntax.Call.Expr)
 				if err != nil {
 					return nil, fmt.Errorf("ReadExtent() failed: %w", err)
 				}
@@ -411,7 +417,7 @@ func GenerateQuestionSyntax(info *lib.FileInfo[QuestionSyntax], writer io.Writer
 						New: GenUnwrapExpr(receiverVar),
 					})
 			} else {
-				callExpr, err := lib.ReadExtent(file, *syntax.Call.Expr)
+				callExpr, err := lib.ReadExtent(file, syntax.Call.Expr)
 				if err != nil {
 					return nil, fmt.Errorf("ReadExtent() failed: %w", err)
 				}
@@ -448,9 +454,10 @@ func (*Traslator) InpectTypes(p *packages.Package) []*QuestionInstanceType {
 	return NewQuestionTypeInspector(p).InspectQuestionTypes()
 }
 
-func (*Traslator) InspectSyntax(p *packages.Package, instTypes []*QuestionInstanceType) lib.SyntaxInspector[QuestionSyntax] {
+func (*Traslator) InspectSyntax(p *packages.Package, instTypes []*QuestionInstanceType) lib.SyntaxInspector[*QuestionSyntax] {
 	return NewQuestionSyntaxInspector(p, instTypes)
 }
-func (*Traslator) Generate(info *lib.FileInfo[QuestionSyntax], writer io.Writer) error {
+
+func (*Traslator) Generate(info *lib.FileInfo[*QuestionSyntax], writer io.Writer) error {
 	return GenerateQuestionSyntax(info, writer)
 }

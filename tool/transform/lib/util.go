@@ -3,6 +3,7 @@ package lib
 import (
 	"crypto/sha256"
 	"encoding/base32"
+	"fmt"
 	"go/types"
 	"path"
 	"regexp"
@@ -88,4 +89,15 @@ func GenPkgName(prefix string, nameHint string) string {
 func GenVarName(prefix string, nameHint string) string {
 	sum := sha256.Sum256([]byte(nameHint))
 	return prefix + strings.TrimRight(base32.HexEncoding.EncodeToString(sum[13:19]), "=")
+}
+
+func JoinStringers[S []T, T fmt.Stringer](ss S, sep string) string {
+	var ret string
+	for i, elem := range ss {
+		ret += elem.String()
+		if i < len(ss)-1 {
+			ret += sep
+		}
+	}
+	return ret
 }
