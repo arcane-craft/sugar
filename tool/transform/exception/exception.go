@@ -157,8 +157,10 @@ func (m *Finally) String() string {
 
 type ExceptionSyntax struct {
 	lib.Extent
-	RetTypes []*lib.Extent
-	Blocks   []SyntaxBlock
+	RetTypes   []*lib.Extent
+	Blocks     []SyntaxBlock
+	HasCatch   bool
+	HasFinally bool
 }
 
 func (m *ExceptionSyntax) String() string {
@@ -571,6 +573,7 @@ func (i *ExceptionSyntaxInspector) InspectSyntax(node ast.Node, stack []ast.Node
 	}
 
 	var blocks []SyntaxBlock
+	var hasCatch, hasFinally bool
 	finallyBlock := i.InspectFinallyBlock(callExpr)
 	if finallyBlock != nil {
 		sel, ok := callExpr.Fun.(*ast.SelectorExpr)
@@ -582,6 +585,7 @@ func (i *ExceptionSyntaxInspector) InspectSyntax(node ast.Node, stack []ast.Node
 			return
 		}
 		blocks = append(blocks, finallyBlock)
+		hasFinally = true
 	}
 	for catch := i.InspectCatchBlock(callExpr); catch != nil; catch = i.InspectCatchBlock(callExpr) {
 		sel, ok := callExpr.Fun.(*ast.SelectorExpr)
@@ -593,6 +597,7 @@ func (i *ExceptionSyntaxInspector) InspectSyntax(node ast.Node, stack []ast.Node
 			return
 		}
 		blocks = append(blocks, catch)
+		hasCatch = true
 	}
 	tryBlock := i.InspectTryBlock(callExpr)
 	if tryBlock == nil {
@@ -623,8 +628,10 @@ func (i *ExceptionSyntaxInspector) InspectSyntax(node ast.Node, stack []ast.Node
 			Start: i.pkg.Fset.Position(exprStmt.Pos()),
 			End:   i.pkg.Fset.Position(exprStmt.End()),
 		},
-		RetTypes: outerFuncRetTypes,
-		Blocks:   blocks,
+		RetTypes:   outerFuncRetTypes,
+		Blocks:     blocks,
+		HasCatch:   hasCatch,
+		HasFinally: hasFinally,
 	}
 	return
 }
@@ -677,6 +684,14 @@ func GenReturns(exprs []string) string {
 	return fmt.Sprintf("return %s", strings.Join(exprs, ", "))
 }
 
+func GenOrExpr(predicates ...string) string {
+	return strings.Join(predicates, " || ")
+}
+
+func GenCompareExpr(left string, op string, right string) string {
+	return fmt.Sprintf("%s %s %s", left, op, right)
+}
+
 func GenIfStmt(cond string, stmt []string) string {
 	return fmt.Sprintf("if %s {\n %s \n}", cond, strings.Join(stmt, "\n"))
 }
@@ -721,8 +736,8 @@ func (*Traslator) Generate(info *lib.FileInfo[*ExceptionSyntax], writer io.Write
 			stmts = append(stmts, GenVarDecl(hasReturnVar, "bool"))
 			catchLabel := lib.GenVarName("Catch", s.Blocks[0].String())
 			finallyLabel := lib.GenVarName("Finally", s.String())
-			var hasCatchLabelDecl, hasFinallyDecl bool
-			for _, b := range s.Blocks {
+
+			for blockIdx, b := range s.Blocks {
 				var blockStmts []string
 				switch block := b.(type) {
 				case *Try:
@@ -841,11 +856,6 @@ func (*Traslator) Generate(info *lib.FileInfo[*ExceptionSyntax], writer io.Write
 					}
 				case *Catch:
 					{
-						if !hasCatchLabelDecl {
-							stmts = append(stmts, GenLabelDecl(catchLabel))
-							hasCatchLabelDecl = true
-						}
-
 						targets, err := lib.ReadExtentList(file, block.Targets)
 						if err != nil {
 							return nil, fmt.Errorf("lib.ReadExtentList() failed: %w", err)
@@ -853,8 +863,79 @@ func (*Traslator) Generate(info *lib.FileInfo[*ExceptionSyntax], writer io.Write
 						var handlerStmts []string
 						gapStart := block.Body.Start
 						for _, c := range block.Calls {
-							call, ok := c.(*Return)
-							if ok {
+							switch call := c.(type) {
+							case *Func:
+								gapExtent := &lib.Extent{
+									Start: gapStart,
+									End:   call.Start,
+								}
+								if call.OuterStmt != nil {
+									gapExtent.End = call.OuterStmt.Start
+								}
+								gap, err := lib.ReadExtent(file, gapExtent)
+								if err != nil {
+									return nil, fmt.Errorf("lib.ReadExtent() failed: %w", err)
+								}
+								handlerStmts = append(handlerStmts, gap)
+								gapStart = call.End
+
+								expr, err := lib.ReadExtent(file, call.Expr)
+								if err != nil {
+									return nil, fmt.Errorf("lib.ReadExtent() failed: %w", err)
+								}
+								var vars []string
+								if len(call.AssignToken) > 0 {
+									vars, err = lib.ReadExtentList(file, call.Vars[:len(call.Vars)-1])
+									if err != nil {
+										return nil, fmt.Errorf("lib.ReadExtent() failed: %w", err)
+									}
+								} else {
+									for range call.Vars[:len(call.Vars)-1] {
+										vars = append(vars, "_")
+									}
+								}
+								errVar := lib.GenVarName("err", call.Vars[len(call.Vars)-1].String())
+								if call.AssignToken == ":=" {
+									handlerStmts = append(handlerStmts, GenAssignCall(append(vars, errVar), call.AssignToken, expr))
+								} else if call.AssignToken == "=" {
+									handlerStmts = append(handlerStmts, GenVarDecl(errVar, errorTypeName))
+									handlerStmts = append(handlerStmts, GenAssignCall(append(vars, errVar), call.AssignToken, expr))
+								} else {
+									handlerStmts = append(handlerStmts, GenAssignCall(append(vars, errVar), ":=", expr))
+								}
+								handlerStmts = append(handlerStmts, GenErrHandler(errVar, []string{
+									GenAssigneStmt([]string{catchErrVar}, "=", []string{errVar}),
+									GenGotoStmt(finallyLabel),
+								}))
+
+								if call.OuterStmt != nil {
+									gapExtent.Start = call.OuterStmt.Start
+									gapExtent.End = call.Start
+									gap, err := lib.ReadExtent(file, gapExtent)
+									if err != nil {
+										return nil, fmt.Errorf("lib.ReadExtent() failed: %w", err)
+									}
+									handlerStmts = append(handlerStmts, gap)
+								}
+							case *Throw:
+								gapExtent := &lib.Extent{
+									Start: gapStart,
+									End:   call.Start,
+								}
+								gap, err := lib.ReadExtent(file, gapExtent)
+								if err != nil {
+									return nil, fmt.Errorf("lib.ReadExtent() failed: %w", err)
+								}
+								handlerStmts = append(handlerStmts, gap)
+								gapStart = call.End
+
+								errExpr, err := lib.ReadExtent(file, call.Err)
+								if err != nil {
+									return nil, fmt.Errorf("lib.ReadExtent() failed: %w", err)
+								}
+								handlerStmts = append(handlerStmts, GenAssigneStmt([]string{catchErrVar}, "=", []string{errExpr}))
+								handlerStmts = append(handlerStmts, GenGotoStmt(finallyLabel))
+							case *Return:
 								gapExtent := &lib.Extent{
 									Start: gapStart,
 									End:   call.Start,
@@ -870,9 +951,9 @@ func (*Traslator) Generate(info *lib.FileInfo[*ExceptionSyntax], writer io.Write
 								if err != nil {
 									return nil, fmt.Errorf("lib.ReadExtentList() failed: %w", err)
 								}
-								blockStmts = append(blockStmts, GenAssigneStmt(resultVars, "=", args))
-								blockStmts = append(blockStmts, GenAssigneStmt([]string{hasReturnVar}, "=", []string{"true"}))
-								blockStmts = append(blockStmts, GenGotoStmt(finallyLabel))
+								handlerStmts = append(handlerStmts, GenAssigneStmt(resultVars, "=", args))
+								handlerStmts = append(handlerStmts, GenAssigneStmt([]string{hasReturnVar}, "=", []string{"true"}))
+								handlerStmts = append(handlerStmts, GenGotoStmt(finallyLabel))
 							}
 						}
 						gapExtent := &lib.Extent{
@@ -919,10 +1000,7 @@ func (*Traslator) Generate(info *lib.FileInfo[*ExceptionSyntax], writer io.Write
 					}
 				case *Finally:
 					{
-						if !hasFinallyDecl {
-							stmts = append(stmts, GenLabelDecl(finallyLabel))
-							hasFinallyDecl = true
-						}
+						stmts = append(stmts, GenLabelDecl(finallyLabel))
 
 						gapStart := block.Body.Start
 						for _, c := range block.Calls {
@@ -957,10 +1035,35 @@ func (*Traslator) Generate(info *lib.FileInfo[*ExceptionSyntax], writer io.Write
 						}
 						blockStmts = append(blockStmts, gap)
 
-						blockStmts = append(blockStmts, GenIfStmt(hasReturnVar, []string{GenReturns(append(resultVars, catchErrVar))}))
+						blockStmts = append(blockStmts, GenIfStmt(
+							GenOrExpr(hasReturnVar, GenCompareExpr(catchErrVar, "!=", "nil")),
+							[]string{
+								GenReturns(append(resultVars, catchErrVar)),
+							},
+						))
 					}
 				}
 				stmts = append(stmts, GenBlock(blockStmts))
+
+				if blockIdx == 0 {
+					stmts = append(stmts, GenLabelDecl(catchLabel))
+					if !s.HasCatch {
+						stmts = append(stmts, GenBlock([]string{
+							GenGotoStmt(finallyLabel),
+						}))
+					}
+				}
+			}
+			if !s.HasFinally {
+				stmts = append(stmts, GenLabelDecl(finallyLabel))
+				stmts = append(stmts, GenBlock([]string{
+					GenIfStmt(
+						GenOrExpr(hasReturnVar, GenCompareExpr(catchErrVar, "!=", "nil")),
+						[]string{
+							GenReturns(append(resultVars, catchErrVar)),
+						},
+					),
+				}))
 			}
 			ret = append(ret, &lib.ReplaceBlock{
 				Old: s.Extent,

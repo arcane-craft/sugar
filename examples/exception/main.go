@@ -60,10 +60,26 @@ func Run() ([]byte, error) {
 		Return(data)
 	}).Catch(Error(os.ErrPermission), func(err error) {
 		fmt.Println("catch error:", err)
+		Return(nil)
 	}).Catch(Type[*os.PathError](), func(err error) {
 		fmt.Println("catch error type:", err)
+		Throw(err)
 	}).Finally(func() {
 		Return([]byte{})
 	})
+	return nil, nil
+}
+
+func Run2() ([]byte, error) {
+
+	Try(func() {
+		_ = WriteFile("example.txt", []byte("Hello, World!"), 0644)
+		data, _ := ReadFile("example.txt")
+		fmt.Println("content1:", string(data))
+		Return(data)
+	}).Catch(Type[*os.PathError](), func(err error) {
+		fmt.Println("catch error:", err)
+	})
+
 	return nil, nil
 }
