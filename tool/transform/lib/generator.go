@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -11,11 +12,11 @@ func GenNewLine() string {
 	return "\n"
 }
 
-func GenBuildFlags(predicate bool) string {
+func GenBuildTags(predicate bool) string {
 	return fmt.Sprintf("%s\n\n", BuildDirective(predicate))
 }
 
-func GenTmpBuildFlags(predicate bool) string {
+func GenTmpBuildTags(predicate bool) string {
 	return fmt.Sprintf("%s\n\n", TmpBuildDirective(predicate))
 }
 
@@ -84,16 +85,16 @@ func GenerateSyntax[Syntax interface {
 		return a.Old.Start.Offset - b.Old.Start.Offset
 	})
 
-	if _, err := writer.Write([]byte(GenTmpBuildFlags(true))); err != nil {
+	if _, err := writer.Write([]byte(GenTmpBuildTags(true))); err != nil {
 		return fmt.Errorf("writer.Write() failed: %w", err)
 	}
 	nextOffset := info.ImportExtent.End.Offset + 1
-	if info.BuildFlag != nil {
-		_, err := file.Seek(int64(info.BuildFlag.End.Offset+2), io.SeekStart)
+	if info.BuildTag != nil {
+		_, err := file.Seek(int64(info.BuildTag.End.Offset+2), io.SeekStart)
 		if err != nil {
 			return fmt.Errorf("file.Seek() failed: %w", err)
 		}
-		nextOffset = info.ImportExtent.End.Offset - info.BuildFlag.End.Offset - 1
+		nextOffset = info.ImportExtent.End.Offset - info.BuildTag.End.Offset - 1
 	}
 	if _, err := io.CopyN(writer, file, int64(nextOffset)); err != nil {
 		return fmt.Errorf("io.CopyN() failed: %w", err)
@@ -118,6 +119,20 @@ func GenerateSyntax[Syntax interface {
 	}
 	if _, err := io.Copy(writer, file); err != nil {
 		return fmt.Errorf("io.Copy() failed: %w", err)
+	}
+	return nil
+}
+
+func replaceBuildTags(tags map[string]*Extent, old string, new string) error {
+	for file := range tags {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			return fmt.Errorf("os.ReadFile(): %w", err)
+		}
+		content = bytes.Replace(content, []byte(old), []byte(new), 1)
+		if err := os.WriteFile(file, content, 0644); err != nil {
+			return fmt.Errorf("os.WriteFile() %w", err)
+		}
 	}
 	return nil
 }

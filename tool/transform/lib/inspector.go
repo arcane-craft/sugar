@@ -37,7 +37,7 @@ type SyntaxInspector[Syntax interface {
 	comparable
 }] interface {
 	Nodes() []ast.Node
-	InspectSyntax(node ast.Node, stack []ast.Node) Syntax
+	Inspect(node ast.Node, stack []ast.Node) Syntax
 }
 
 type Extent struct {
@@ -66,8 +66,8 @@ type PackageInspector[Syntax interface {
 }] struct {
 	pkg           *packages.Package
 	imports       map[string]map[string]string
-	importExtents map[string]Extent
-	buildFlags    map[string]Extent
+	importExtents map[string]*Extent
+	buildTags     map[string]*Extent
 
 	inspector SyntaxInspector[Syntax]
 }
@@ -77,26 +77,15 @@ func NewPackageInspector[Syntax interface {
 	comparable
 }](pkg *packages.Package, inpector SyntaxInspector[Syntax]) *PackageInspector[Syntax] {
 	imports := make(map[string]map[string]string)
-	importExtents := make(map[string]Extent)
-	buildFlags := make(map[string]Extent)
+	importExtents := make(map[string]*Extent)
+	buildTags := make(map[string]*Extent)
 	for _, file := range pkg.Syntax {
-		for _, cg := range file.Comments {
-			for _, c := range cg.List {
-				if strings.Contains(c.Text, TmpBuildDirective(false)) ||
-					strings.Contains(c.Text, BuildDirective(false)) ||
-					strings.Contains(c.Text, TmpBuildDirective(true)) ||
-					strings.Contains(c.Text, BuildDirective(true)) {
-					fileName := pkg.Fset.Position(c.Pos()).Filename
-					buildFlags[fileName] = Extent{
-						Start: pkg.Fset.Position(c.Pos()),
-						End:   pkg.Fset.Position(c.End()),
-					}
-				}
-			}
+		for k, v := range FindFileBuildTags(pkg, file) {
+			buildTags[k] = v
 		}
 		specs := make(map[string]string)
 		pkgEndPos := pkg.Fset.Position(file.Name.End())
-		importExtents[pkgEndPos.Filename] = Extent{
+		importExtents[pkgEndPos.Filename] = &Extent{
 			Start: pkgEndPos,
 			End:   pkgEndPos,
 		}
@@ -118,7 +107,7 @@ func NewPackageInspector[Syntax interface {
 		pkg:           pkg,
 		imports:       imports,
 		importExtents: importExtents,
-		buildFlags:    buildFlags,
+		buildTags:     buildTags,
 		inspector:     inpector,
 	}
 }
@@ -128,10 +117,10 @@ type FileInfo[Syntax interface {
 	comparable
 }] struct {
 	Path         string
-	BuildFlag    *Extent
+	BuildTag     *Extent
 	PkgPath      string
 	Imports      map[string]string
-	ImportExtent Extent
+	ImportExtent *Extent
 	Syntax       []Syntax
 }
 
@@ -156,7 +145,7 @@ func (i *PackageInspector[Syntax]) Inspect() []*FileInfo[Syntax] {
 	fileMap := make(map[string]*FileInfo[Syntax])
 	ins.WithStack(i.inspector.Nodes(),
 		func(node ast.Node, _ bool, stack []ast.Node) bool {
-			syntax := i.inspector.InspectSyntax(node, stack)
+			syntax := i.inspector.Inspect(node, stack)
 			var zero Syntax
 			if syntax != zero {
 				fileName := i.pkg.Fset.Position(node.Pos()).Filename
@@ -177,10 +166,42 @@ func (i *PackageInspector[Syntax]) Inspect() []*FileInfo[Syntax] {
 		})
 	var ret []*FileInfo[Syntax]
 	for _, f := range fileMap {
-		if extent, ok := i.buildFlags[f.Path]; ok {
-			f.BuildFlag = &extent
+		if extent, ok := i.buildTags[f.Path]; ok {
+			f.BuildTag = extent
 		}
 		ret = append(ret, f)
 	}
 	return ret
+}
+
+func FindFileBuildTags(pkg *packages.Package, file *ast.File) map[string]*Extent {
+	buildTags := make(map[string]*Extent)
+	for _, cg := range file.Comments {
+		for _, c := range cg.List {
+			if strings.Contains(c.Text, TmpBuildDirective(false)) ||
+				strings.Contains(c.Text, BuildDirective(false)) ||
+				strings.Contains(c.Text, TmpBuildDirective(true)) ||
+				strings.Contains(c.Text, BuildDirective(true)) {
+				fileName := pkg.Fset.Position(c.Pos()).Filename
+				buildTags[fileName] = &Extent{
+					Start: pkg.Fset.Position(c.Pos()),
+					End:   pkg.Fset.Position(c.End()),
+				}
+			}
+		}
+	}
+	return buildTags
+}
+
+func FindPackageBuildTags(pkg *packages.Package) map[string]*Extent {
+	buildTags := make(map[string]*Extent)
+	if strings.HasPrefix(pkg.PkgPath, "github.com/arcane-craft/sugar/syntax") {
+		return buildTags
+	}
+	for _, file := range pkg.Syntax {
+		for k, v := range FindFileBuildTags(pkg, file) {
+			buildTags[k] = v
+		}
+	}
+	return buildTags
 }

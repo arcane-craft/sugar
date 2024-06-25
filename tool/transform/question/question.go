@@ -38,7 +38,7 @@ func (m *QuestionInstanceType) String() string {
 	return fmt.Sprintf("Name: %s", m.Name)
 }
 
-func (i *QuestionTypeInspector) inspectQuestionIfaceType(ident *ast.Ident) *QuestionInstanceType {
+func (i *QuestionTypeInspector) findQuestionIfaceType(ident *ast.Ident) *QuestionInstanceType {
 	if ifaceType := i.pkg.TypesInfo.TypeOf(ident); ifaceType != nil {
 		return &QuestionInstanceType{
 			Name: lib.GetPkgPathFromType(ifaceType) + "." + ident.Name,
@@ -47,7 +47,7 @@ func (i *QuestionTypeInspector) inspectQuestionIfaceType(ident *ast.Ident) *Ques
 	return nil
 }
 
-func (i *QuestionTypeInspector) inspectQuestionEmbed(methodType ast.Expr, target *ast.Ident) *QuestionInstanceType {
+func (i *QuestionTypeInspector) findQuestionEmbed(methodType ast.Expr, target *ast.Ident) *QuestionInstanceType {
 	indexExpr, ok := methodType.(*ast.IndexExpr)
 	if ok {
 		switch node := indexExpr.X.(type) {
@@ -56,7 +56,7 @@ func (i *QuestionTypeInspector) inspectQuestionEmbed(methodType ast.Expr, target
 				if obj := i.pkg.TypesInfo.ObjectOf(node.Sel); obj != nil {
 					if objPkg := obj.Pkg(); objPkg != nil &&
 						objPkg.Path() == questionPkgPath {
-						return i.inspectQuestionIfaceType(target)
+						return i.findQuestionIfaceType(target)
 					}
 				}
 			}
@@ -65,7 +65,7 @@ func (i *QuestionTypeInspector) inspectQuestionEmbed(methodType ast.Expr, target
 				if obj := i.pkg.TypesInfo.ObjectOf(node); obj != nil {
 					if objPkg := obj.Pkg(); objPkg != nil &&
 						objPkg.Path() == questionPkgPath {
-						return i.inspectQuestionIfaceType(target)
+						return i.findQuestionIfaceType(target)
 					}
 				}
 			}
@@ -74,7 +74,7 @@ func (i *QuestionTypeInspector) inspectQuestionEmbed(methodType ast.Expr, target
 	return nil
 }
 
-func (i *QuestionTypeInspector) InspectQuestionTypes() []*QuestionInstanceType {
+func (i *QuestionTypeInspector) Inspect() []*QuestionInstanceType {
 	var ret []*QuestionInstanceType
 	ins := inspector.New(i.pkg.Syntax)
 	ins.Nodes([]ast.Node{
@@ -88,7 +88,7 @@ func (i *QuestionTypeInspector) InspectQuestionTypes() []*QuestionInstanceType {
 					ifaceType, ok := typeSpec.Type.(*ast.InterfaceType)
 					if ok && ifaceType.Methods != nil {
 						for _, method := range ifaceType.Methods.List {
-							instType := i.inspectQuestionEmbed(method.Type, typeSpec.Name)
+							instType := i.findQuestionEmbed(method.Type, typeSpec.Name)
 							if instType != nil {
 								ret = append(ret, instType)
 								break
@@ -162,7 +162,7 @@ func (i *QuestionSyntaxInspector) isQuestionMethod(sel *ast.SelectorExpr) bool {
 	return false
 }
 
-func (i *QuestionSyntaxInspector) inspectQuestionFnCall(expr ast.Expr) (*lib.Extent, string) {
+func (i *QuestionSyntaxInspector) findQuestionFnCall(expr ast.Expr) (*lib.Extent, string) {
 	call, ok := expr.(*ast.CallExpr)
 	if ok && len(call.Args) <= 0 {
 		sel, ok := call.Fun.(*ast.SelectorExpr)
@@ -176,7 +176,7 @@ func (i *QuestionSyntaxInspector) inspectQuestionFnCall(expr ast.Expr) (*lib.Ext
 	return nil, ""
 }
 
-func (i *QuestionSyntaxInspector) InspectFuncRetType(t ast.Expr) *QImplType {
+func (i *QuestionSyntaxInspector) queryFuncRetType(t ast.Expr) *QImplType {
 	expr, ok := t.(*ast.IndexExpr)
 	if ok {
 		return &QImplType{
@@ -187,9 +187,9 @@ func (i *QuestionSyntaxInspector) InspectFuncRetType(t ast.Expr) *QImplType {
 	return nil
 }
 
-func (i *QuestionSyntaxInspector) InspectFuncType(typ *ast.FuncType) *QImplType {
+func (i *QuestionSyntaxInspector) queryFuncType(typ *ast.FuncType) *QImplType {
 	if typ.Results != nil && typ.Results.NumFields() == 1 {
-		retType := i.InspectFuncRetType(typ.Results.List[0].Type)
+		retType := i.queryFuncRetType(typ.Results.List[0].Type)
 		if retType != nil {
 			if _, ok := i.instanceTypes[retType.MainType]; ok {
 				return retType
@@ -199,9 +199,9 @@ func (i *QuestionSyntaxInspector) InspectFuncType(typ *ast.FuncType) *QImplType 
 	return nil
 }
 
-func (i *QuestionSyntaxInspector) InspectSyntax(n ast.Node, stack []ast.Node) (syntax *QuestionSyntax) {
+func (i *QuestionSyntaxInspector) Inspect(n ast.Node, stack []ast.Node) (syntax *QuestionSyntax) {
 	callExpr := n.(*ast.CallExpr)
-	exprExt, exprType := i.inspectQuestionFnCall(callExpr)
+	exprExt, exprType := i.findQuestionFnCall(callExpr)
 	call := &QuestionCall{
 		Expr:     exprExt,
 		ExprType: exprType,
@@ -213,11 +213,11 @@ func (i *QuestionSyntaxInspector) InspectSyntax(n ast.Node, stack []ast.Node) (s
 		for idx := len(stack) - 2; idx >= 0; idx-- {
 			switch fn := stack[idx].(type) {
 			case *ast.FuncLit:
-				retType = i.InspectFuncType(fn.Type)
+				retType = i.queryFuncType(fn.Type)
 				outerFn = i.pkg.TypesInfo.TypeOf(fn).String()
 				break FindOuterFunc
 			case *ast.FuncDecl:
-				retType = i.InspectFuncType(fn.Type)
+				retType = i.queryFuncType(fn.Type)
 				outerFn = strings.Replace(i.pkg.TypesInfo.TypeOf(fn.Name).String(), "func", "func "+fn.Name.Name+"", 1)
 				break FindOuterFunc
 			}
@@ -230,7 +230,7 @@ func (i *QuestionSyntaxInspector) InspectSyntax(n ast.Node, stack []ast.Node) (s
 						if len(stack) > 3 {
 							switch parent := stack[idx-1].(type) {
 							case *ast.IfStmt:
-								if parent.Init == stmt || parent.Else == stmt {
+								if parent.Init == stmt {
 									call.OuterStmt = &lib.Extent{
 										Start: i.pkg.Fset.Position(parent.Pos()),
 										End:   i.pkg.Fset.Position(parent.End()),
@@ -250,16 +250,8 @@ func (i *QuestionSyntaxInspector) InspectSyntax(n ast.Node, stack []ast.Node) (s
 										End:   i.pkg.Fset.Position(parent.End()),
 									}
 								}
-							case *ast.CommClause:
-								if parent.Comm == stmt {
-									selectStmt := stack[idx-1]
-									call.OuterStmt = &lib.Extent{
-										Start: i.pkg.Fset.Position(selectStmt.Pos()),
-										End:   i.pkg.Fset.Position(selectStmt.End()),
-									}
-								}
 							case *ast.ForStmt:
-								if parent.Init == stmt || parent.Post == stmt {
+								if parent.Init == stmt {
 									call.OuterStmt = &lib.Extent{
 										Start: i.pkg.Fset.Position(parent.Pos()),
 										End:   i.pkg.Fset.Position(parent.End()),
@@ -298,16 +290,6 @@ func (i *QuestionSyntaxInspector) InspectSyntax(n ast.Node, stack []ast.Node) (s
 									Start: i.pkg.Fset.Position(current.Pos()),
 									End:   i.pkg.Fset.Position(current.End()),
 								}
-							}
-						case *ast.CaseClause:
-							switchStmt := stack[idx-1]
-							call.Extent = lib.Extent{
-								Start: i.pkg.Fset.Position(callExpr.Pos()),
-								End:   i.pkg.Fset.Position(callExpr.End()),
-							}
-							call.OuterStmt = &lib.Extent{
-								Start: i.pkg.Fset.Position(switchStmt.Pos()),
-								End:   i.pkg.Fset.Position(switchStmt.End()),
 							}
 						default:
 						}
@@ -451,7 +433,7 @@ func NewTraslator() *Traslator {
 }
 
 func (*Traslator) InpectTypes(p *packages.Package) []*QuestionInstanceType {
-	return NewQuestionTypeInspector(p).InspectQuestionTypes()
+	return NewQuestionTypeInspector(p).Inspect()
 }
 
 func (*Traslator) InspectSyntax(p *packages.Package, instTypes []*QuestionInstanceType) lib.SyntaxInspector[*QuestionSyntax] {

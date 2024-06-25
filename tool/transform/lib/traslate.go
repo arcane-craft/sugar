@@ -30,13 +30,12 @@ func TranslateSyntax[Type, Syntax interface {
 ) error {
 
 	var finished bool
-	var buildFlags []string
-	modifiedFiles := map[string]struct{}{}
+	var buildTags []string
 
 	for !finished {
 		finished = true
 
-		pkgs, err := LoadPackages(ctx, rootDir, buildFlags...)
+		pkgs, err := LoadPackages(ctx, rootDir, buildTags...)
 		if err != nil {
 			return fmt.Errorf("load source packages failed: %w", err)
 		}
@@ -79,7 +78,7 @@ func TranslateSyntax[Type, Syntax interface {
 						fmt.Println("format code of", newFile, "failed:", err)
 					}
 
-					if len(buildFlags) > 0 {
+					if len(buildTags) > 0 {
 						if err := os.Remove(info.Path); err != nil {
 							fmt.Println("remove file", info.Path, "failed:", err)
 							return
@@ -88,18 +87,17 @@ func TranslateSyntax[Type, Syntax interface {
 							fmt.Println("rename file", newFile, "failed:", err)
 							return
 						}
-						modifiedFiles[info.Path] = struct{}{}
 					} else {
 						buf := bytes.NewBuffer(nil)
-						if info.BuildFlag == nil {
-							buf.Write([]byte(GenTmpBuildFlags(false)))
+						if info.BuildTag == nil {
+							buf.Write([]byte(GenTmpBuildTags(false)))
 						}
 						bs, err := os.ReadFile(info.Path)
 						if err != nil {
 							fmt.Println("read file", info.Path, "failed:", err)
 							return
 						}
-						buf.Write(bytes.Replace(bs, []byte(prodBuildTag), []byte(tmpBuildTag), 1))
+						buf.Write(bs)
 						tmpOldFileNam := info.Path + ".old"
 						if err := os.WriteFile(tmpOldFileNam, buf.Bytes(), 0644); err != nil {
 							fmt.Println("write file", tmpOldFileNam, "failed:", err)
@@ -113,26 +111,49 @@ func TranslateSyntax[Type, Syntax interface {
 							fmt.Println("rename file", tmpOldFileNam, "failed:", err)
 							return
 						}
-						modifiedFiles[info.Path] = struct{}{}
 					}
 				}()
 			}
 			totalFiles = append(totalFiles, files...)
 		}
-		if len(buildFlags) <= 0 || len(totalFiles) > 0 {
+		if len(buildTags) <= 0 || len(totalFiles) > 0 {
 			finished = false
 		}
-		buildFlags = []string{"-tags=" + tmpBuildTag}
-	}
-	for f := range modifiedFiles {
-		content, err := os.ReadFile(f)
-		if err != nil {
-			return fmt.Errorf("os.ReadFile(): %w", err)
-		}
-		content = bytes.Replace(content, []byte(tmpBuildTag), []byte(prodBuildTag), 1)
-		if err := os.WriteFile(f, content, 0644); err != nil {
-			return fmt.Errorf("os.WriteFile() %w", err)
-		}
+		buildTags = []string{"-tags=" + tmpBuildTag}
 	}
 	return nil
+}
+
+func changeBuildTags(ctx context.Context, rootDir string, old string, new string) error {
+	var finished bool
+	var buildTags []string
+
+	for !finished {
+		finished = true
+
+		pkgs, err := LoadPackages(ctx, rootDir, buildTags...)
+		if err != nil {
+			return fmt.Errorf("load source packages failed: %w", err)
+		}
+		for _, p := range pkgs {
+			if err := replaceBuildTags(FindPackageBuildTags(p), old, new); err != nil {
+				return fmt.Errorf("MakePackageTemp() failed: %w", err)
+			}
+		}
+
+		if len(buildTags) <= 0 {
+			buildTags = []string{"-tags=" + old}
+			finished = false
+		}
+	}
+
+	return nil
+}
+
+func SetTmpBuildTags(ctx context.Context, rootDir string) error {
+	return changeBuildTags(ctx, rootDir, prodBuildTag, tmpBuildTag)
+}
+
+func SetProdBuildTags(ctx context.Context, rootDir string) error {
+	return changeBuildTags(ctx, rootDir, tmpBuildTag, prodBuildTag)
 }
