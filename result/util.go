@@ -5,11 +5,11 @@ import (
 	"github.com/arcane-craft/sugar/tuple"
 )
 
-func FromErr(e error) Result[sugar.Empty] {
+func FromErr(e error) Result[sugar.Unit] {
 	if e != nil {
-		return Err[sugar.Empty](e)
+		return Err[sugar.Unit](e)
 	}
-	return Ok(sugar.Empty{})
+	return Ok(sugar.Unit{})
 }
 
 func FromR1Err[T any](v T, e error) Result[T] {

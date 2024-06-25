@@ -1,3 +1,3 @@
 package sugar
 
-type Empty struct{}
+type Unit struct{}

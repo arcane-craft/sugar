@@ -33,15 +33,15 @@ func main() {
 		return
 	}
 
-	err := lib.TranslateSyntax(ctx, rootDir, true, question.NewTraslator())
+	err := lib.TranslateSyntax(ctx, rootDir, true, exception.NewTraslator())
 	if err != nil {
-		fmt.Println("translate question syntax failed:", err)
+		fmt.Println("translate exception syntax failed:", err)
 		return
 	}
 
-	err = lib.TranslateSyntax(ctx, rootDir, false, exception.NewTraslator())
+	err = lib.TranslateSyntax(ctx, rootDir, false, question.NewTraslator())
 	if err != nil {
-		fmt.Println("translate exception syntax failed:", err)
+		fmt.Println("translate question syntax failed:", err)
 		return
 	}
 

@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"slices"
+	"strings"
 )
 
 func GenNewLine() string {
@@ -125,6 +126,12 @@ func GenerateSyntax[Syntax interface {
 
 func replaceBuildTags(tags map[string]*Extent, old string, new string) error {
 	for file := range tags {
+		if old == prodBuildTag && strings.HasSuffix(file, old+".go") {
+			if err := os.Remove(file); err != nil {
+				return fmt.Errorf("os.Remove(): %w", err)
+			}
+			continue
+		}
 		content, err := os.ReadFile(file)
 		if err != nil {
 			return fmt.Errorf("os.ReadFile(): %w", err)

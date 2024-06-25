@@ -1022,13 +1022,19 @@ func (*Traslator) Generate(info *lib.FileInfo[*ExceptionSyntax], writer io.Write
 						stmts = append(stmts, GenLabelDecl(finallyLabel))
 
 						handlerStmts, err := genBlockCalls(file, block, func(c CallStmt) (stmts []string, err error) {
-							call, ok := c.(*Return)
-							if ok {
+							switch call := c.(type) {
+							case *Func:
+								var callStr string
+								callStr, err = lib.ReadExtent(file, &call.Extent)
+								if err == nil {
+									stmts = append(stmts, callStr)
+								}
+							case *Return:
 								stmts, err = genReturnStmt(file, call, resultVars, "", catchErrVar, "")
 								if err != nil {
 									err = fmt.Errorf("genReturnStmt() failed: %w", err)
 								}
-							} else {
+							default:
 								err = fmt.Errorf("unexpected call")
 							}
 							return
