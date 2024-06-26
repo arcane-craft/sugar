@@ -15,18 +15,14 @@ func main() {
 }
 
 func Run() ([]byte, error) {
-	var file *os.File
 	Try(func() {
-		file, _ = os.Open("hello.txt")
+		file, _ := os.Open("hello.txt")
+		defer file.Close()
 		content, _ := io.ReadAll(file)
 		Return(content)
 	}).Catch(Type[*os.PathError](), func(err error) {
 		fmt.Println("error occured:", err)
 		Throw(err)
-	}).Finally(func() {
-		if file != nil {
-			file.Close()
-		}
 	})
 	return nil, nil
 }

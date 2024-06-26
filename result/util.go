@@ -23,12 +23,12 @@ func FromR2Err[A, B any](r1 A, r2 B, e error) Result[tuple.Pair[A, B]] {
 	if e != nil {
 		return Err[tuple.Pair[A, B]](e)
 	}
-	return Ok(tuple.T2(r1, r2))
+	return Ok(tuple.NewPair(r1, r2))
 }
 
-func FromR3Err[A, B, C any](r1 A, r2 B, r3 C, e error) Result[tuple.Tuple3[A, B, C]] {
+func FromR3Err[A, B, C any](r1 A, r2 B, r3 C, e error) Result[tuple.Triple[A, B, C]] {
 	if e != nil {
-		return Err[tuple.Tuple3[A, B, C]](e)
+		return Err[tuple.Triple[A, B, C]](e)
 	}
-	return Ok(tuple.T3(r1, r2, r3))
+	return Ok(tuple.NewTriple(r1, r2, r3))
 }

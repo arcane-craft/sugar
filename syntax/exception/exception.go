@@ -14,10 +14,6 @@ func (handler) Catch(target, func(error)) handler {
 	panic("Catch() is unsupported at runtime")
 }
 
-func (handler) Finally(func()) {
-	panic("Finally() is unsupported at runtime")
-}
-
 func Return(...any) {
 	panic("Return() is unsupported at runtime")
 }

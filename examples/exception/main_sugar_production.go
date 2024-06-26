@@ -16,33 +16,33 @@ func main() {
 }
 
 func Run() ([]byte, error) {
-	var file *os.File
 	{
 		var resultUPH82AR1SS []byte
 		var catchErr4K9AHBGELS error
-		var hasRetG3VL22R4DG bool
+		var hasRet5PRN3G50I8 bool
 		{
 
-			var errMSCVA62MQ0 error
-			file, errMSCVA62MQ0 = os.Open("hello.txt")
-			if errMSCVA62MQ0 != nil {
-				catchErr4K9AHBGELS = errMSCVA62MQ0
-				goto CatchEOMC3UC1OO
+			file, errVJ948GMHAK := os.Open("hello.txt")
+			if errVJ948GMHAK != nil {
+				catchErr4K9AHBGELS = errVJ948GMHAK
+				goto CatchTBC0MLSJ4S
 			}
+
+			defer file.Close()
 
 			content, errL0OS45QF7O := io.ReadAll(file)
 			if errL0OS45QF7O != nil {
 				catchErr4K9AHBGELS = errL0OS45QF7O
-				goto CatchEOMC3UC1OO
+				goto CatchTBC0MLSJ4S
 			}
 
 			resultUPH82AR1SS = content
-			hasRetG3VL22R4DG = true
-			goto FinallyB5JUD32NLO
+			hasRet5PRN3G50I8 = true
+			goto Finally8KDIGIEIBS
 
-			goto FinallyB5JUD32NLO
+			goto Finally8KDIGIEIBS
 		}
-	CatchEOMC3UC1OO:
+	CatchTBC0MLSJ4S:
 		{
 			if errors.As(catchErr4K9AHBGELS, *os.PathError) {
 				err := catchErr4K9AHBGELS
@@ -51,25 +51,18 @@ func Run() ([]byte, error) {
 				_, errRMSCQGU0GS := fmt.Println("error occured:", err)
 				if errRMSCQGU0GS != nil {
 					catchErr4K9AHBGELS = errRMSCQGU0GS
-					goto FinallyB5JUD32NLO
+					goto Finally8KDIGIEIBS
 				}
 
 				catchErr4K9AHBGELS = err
-				goto FinallyB5JUD32NLO
+				goto Finally8KDIGIEIBS
 
-				goto FinallyB5JUD32NLO
+				goto Finally8KDIGIEIBS
 			}
 		}
-	FinallyB5JUD32NLO:
+	Finally8KDIGIEIBS:
 		{
-
-			if file != nil {
-
-				file.Close()
-
-			}
-
-			if hasRetG3VL22R4DG || catchErr4K9AHBGELS != nil {
+			if hasRet5PRN3G50I8 || catchErr4K9AHBGELS != nil {
 				return resultUPH82AR1SS, catchErr4K9AHBGELS
 			}
 		}
