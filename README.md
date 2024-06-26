@@ -10,7 +10,7 @@ https://github.com/arcane-craft/sugar/blob/f431e81db5c0f36b0695572a2069e8bb94c77
 
 https://github.com/arcane-craft/sugar/blob/f431e81db5c0f36b0695572a2069e8bb94c77cd5/examples/question/main.go#L56-L58
 
-- Try/Catch based error handling for function calls which has return type **error** at last position.  
+- Try/Catch based error handling for function call which has return type **error** at last position.  
 
 https://github.com/arcane-craft/sugar/blob/f431e81db5c0f36b0695572a2069e8bb94c77cd5/examples/exception/main.go#L17-L28
 
