@@ -4,12 +4,13 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 
 	. "github.com/arcane-craft/sugar/option"
 	. "github.com/arcane-craft/sugar/result"
+
+	fmt_O1ASOQ7UHS "fmt"
 )
 
 func main() {
@@ -20,14 +21,14 @@ func main() {
 func ResultQuestion() Result[string] {
 	var07QIGRQF8K := From(os.Open("hello.txt"))
 	if var07QIGRQF8K.IsErr() {
-		return Err[string](fmt.Errorf("func ResultQuestion() github.com/arcane-craft/sugar/result.Result[string]: %w", var07QIGRQF8K.UnwrapErr()))
+		return Err[string](fmt_O1ASOQ7UHS.Errorf("func ResultQuestion() github.com/arcane-craft/sugar/result.Result[string]: %w", var07QIGRQF8K.UnwrapErr()))
 	}
 	file := var07QIGRQF8K.Unwrap()
 
 	defer file.Close()
 	var60KDCIE178 := From(io.ReadAll(file))
 	if var60KDCIE178.IsErr() {
-		return Err[string](fmt.Errorf("func ResultQuestion() github.com/arcane-craft/sugar/result.Result[string]: %w", var60KDCIE178.UnwrapErr()))
+		return Err[string](fmt_O1ASOQ7UHS.Errorf("func ResultQuestion() github.com/arcane-craft/sugar/result.Result[string]: %w", var60KDCIE178.UnwrapErr()))
 	}
 	content := var60KDCIE178.Unwrap()
 
@@ -65,11 +66,11 @@ func (o JSONObject) Get(key string) Option[JSONValue] {
 }
 
 func OptionQuestion() Option[string] {
-	varGRIG5FKNGC := Deocde([]byte(`{"hello":"world"}`))
-	if varGRIG5FKNGC.IsNone() {
+	varCEV3QKHRVO := Deocde([]byte(`{"hello":"world"}`))
+	if varCEV3QKHRVO.IsNone() {
 		return None[string]()
 	}
-	var4OEKS2K7VS := varGRIG5FKNGC.Unwrap().Get("hello")
+	var4OEKS2K7VS := varCEV3QKHRVO.Unwrap().Get("hello")
 	if var4OEKS2K7VS.IsNone() {
 		return None[string]()
 	}

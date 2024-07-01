@@ -3,7 +3,7 @@
 package tryfunc
 
 func Try_(error) {
-	panic("Try() is unsupported at runtime")
+	panic("Try_() is unsupported at runtime")
 }
 
 func Try[A any](A, error) A {

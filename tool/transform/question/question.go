@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"io"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/arcane-craft/sugar/tool/transform/lib"
@@ -17,6 +18,9 @@ const (
 	questionPkgPath = "github.com/arcane-craft/sugar/syntax/question"
 	questionIface   = "Question"
 	questionFun     = "Q"
+	resultPkgPath   = "github.com/arcane-craft/sugar/result"
+	optionPkgPath   = "github.com/arcane-craft/sugar/option"
+	stdFmtPkgPath   = "fmt"
 )
 
 type QuestionTypeInspector struct {
@@ -321,8 +325,15 @@ func GenAssginStmt(assignVar, assignToken, call string) string {
 	return fmt.Sprintf("%s %s %s\n", assignVar, assignToken, call)
 }
 
-func GenErrorHandler(resultVar, retType, outerFn string) string {
-	return fmt.Sprintf("if %s.IsErr() {\nreturn Err[%s](fmt.Errorf(\"%s: %%w\", %s.UnwrapErr()))\n}\n", resultVar, retType, outerFn, resultVar)
+func GenErrorHandler(resultPkg, fmtPkg, resultVar, retType, outerFn string) string {
+	if len(resultPkg) > 0 {
+		resultPkg += "."
+	}
+	if len(fmtPkg) > 0 {
+		fmtPkg += "."
+	}
+	return fmt.Sprintf("if %s.IsErr() {\nreturn %sErr[%s](%sErrorf(\"%s: %%w\", %s.UnwrapErr()))\n}\n",
+		resultVar, resultPkg, retType, fmtPkg, outerFn, resultVar)
 }
 
 func GenUnwrapStmt(assignVar, assignToken, receiverVar string) string {
@@ -333,8 +344,11 @@ func GenUnwrapExpr(receiverVar string) string {
 	return fmt.Sprintf("%s.Unwrap()", receiverVar)
 }
 
-func GenNoneHandler(optionVar, retType string) string {
-	return fmt.Sprintf("if %s.IsNone() {\nreturn None[%s]()\n}\n", optionVar, retType)
+func GenNoneHandler(optionPkg, optionVar, retType string) string {
+	if len(optionPkg) > 0 {
+		optionPkg += "."
+	}
+	return fmt.Sprintf("if %s.IsNone() {\nreturn %sNone[%s]()\n}\n", optionVar, optionPkg, retType)
 }
 
 func GenerateQuestionSyntax(info *lib.FileInfo[*QuestionSyntax], writer io.Writer) error {
@@ -359,9 +373,24 @@ func GenerateQuestionSyntax(info *lib.FileInfo[*QuestionSyntax], writer io.Write
 				}
 				result := GenAssginStmt(receiverVar, token.DEFINE.String(), callExpr)
 				if strings.HasSuffix(lib.GetNameFromTypeStr(syntax.Call.ExprType), "Result") {
-					result += GenErrorHandler(receiverVar, retType, syntax.OuterFn)
+					resultPkg, ok := info.Imports[resultPkgPath]
+					if !ok {
+						resultPkg = lib.GenPkgName(path.Base(resultPkgPath), resultPkgPath)
+						addImports[resultPkgPath] = resultPkg
+					}
+					fmtPkg, ok := info.Imports[stdFmtPkgPath]
+					if !ok {
+						fmtPkg = lib.GenPkgName(path.Base(stdFmtPkgPath), stdFmtPkgPath)
+						addImports[stdFmtPkgPath] = fmtPkg
+					}
+					result += GenErrorHandler(resultPkg, fmtPkg, receiverVar, retType, syntax.OuterFn)
 				} else {
-					result += GenNoneHandler(receiverVar, retType)
+					optionPkg, ok := info.Imports[optionPkgPath]
+					if !ok {
+						optionPkg = lib.GenPkgName(path.Base(optionPkgPath), optionPkgPath)
+						addImports[optionPkgPath] = optionPkg
+					}
+					result += GenNoneHandler(optionPkg, receiverVar, retType)
 				}
 				result += GenUnwrapStmt(assignVar, syntax.Call.AssignToken, receiverVar)
 				ret = append(ret, &lib.ReplaceBlock{
@@ -382,9 +411,24 @@ func GenerateQuestionSyntax(info *lib.FileInfo[*QuestionSyntax], writer io.Write
 				}
 				result := GenAssginStmt(receiverVar, token.DEFINE.String(), callExpr)
 				if strings.HasSuffix(lib.GetNameFromTypeStr(syntax.Call.ExprType), "Result") {
-					result += GenErrorHandler(receiverVar, retType, syntax.OuterFn)
+					resultPkg, ok := info.Imports[resultPkgPath]
+					if !ok {
+						resultPkg = lib.GenPkgName(path.Base(resultPkgPath), resultPkgPath)
+						addImports[resultPkgPath] = resultPkg
+					}
+					fmtPkg, ok := info.Imports[stdFmtPkgPath]
+					if !ok {
+						fmtPkg = lib.GenPkgName(path.Base(stdFmtPkgPath), stdFmtPkgPath)
+						addImports[stdFmtPkgPath] = fmtPkg
+					}
+					result += GenErrorHandler(resultPkg, fmtPkg, receiverVar, retType, syntax.OuterFn)
 				} else {
-					result += GenNoneHandler(receiverVar, retType)
+					optionPkg, ok := info.Imports[optionPkgPath]
+					if !ok {
+						optionPkg = lib.GenPkgName(path.Base(optionPkgPath), optionPkgPath)
+						addImports[optionPkgPath] = optionPkg
+					}
+					result += GenNoneHandler(optionPkg, receiverVar, retType)
 				}
 				ret = append(ret,
 					&lib.ReplaceBlock{
@@ -412,9 +456,24 @@ func GenerateQuestionSyntax(info *lib.FileInfo[*QuestionSyntax], writer io.Write
 				}
 				result := GenAssginStmt(receiverVar, token.DEFINE.String(), callExpr)
 				if strings.HasSuffix(lib.GetNameFromTypeStr(syntax.Call.ExprType), "Result") {
-					result += GenErrorHandler(receiverVar, retType, syntax.OuterFn)
+					resultPkg, ok := info.Imports[resultPkgPath]
+					if !ok {
+						resultPkg = lib.GenPkgName(path.Base(resultPkgPath), resultPkgPath)
+						addImports[resultPkgPath] = resultPkg
+					}
+					fmtPkg, ok := info.Imports[stdFmtPkgPath]
+					if !ok {
+						fmtPkg = lib.GenPkgName(path.Base(stdFmtPkgPath), stdFmtPkgPath)
+						addImports[stdFmtPkgPath] = fmtPkg
+					}
+					result += GenErrorHandler(resultPkg, fmtPkg, receiverVar, retType, syntax.OuterFn)
 				} else {
-					result += GenNoneHandler(receiverVar, retType)
+					optionPkg, ok := info.Imports[optionPkgPath]
+					if !ok {
+						optionPkg = lib.GenPkgName(path.Base(optionPkgPath), optionPkgPath)
+						addImports[optionPkgPath] = optionPkg
+					}
+					result += GenNoneHandler(optionPkg, receiverVar, retType)
 				}
 				ret = append(ret, &lib.ReplaceBlock{
 					Old: syntax.Call.Extent,

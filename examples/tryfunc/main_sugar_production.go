@@ -15,10 +15,10 @@ func main() {
 	TryOnly()
 }
 
-func TryOnly() (retICFVANDPQ0 []byte, err9EIH73OK48 error) {
+func TryOnly() (_ []byte, err9EIH73OK48 error) {
 	defer func() {
 		if err9EIH73OK48 != nil {
-			err9EIH73OK48 = fmt.Errorf("func TryOnly() ([]byte, error): %w")
+			err9EIH73OK48 = fmt.Errorf("func TryOnly() ([]byte, error): %w", err9EIH73OK48)
 		}
 	}()
 
@@ -39,7 +39,7 @@ func TryOnly() (retICFVANDPQ0 []byte, err9EIH73OK48 error) {
 func TryWithDefer() (c []byte, e error) {
 	defer func() {
 		if e != nil {
-			e = fmt.Errorf("func TryWithDefer() (c []byte, e error): %w")
+			e = fmt.Errorf("func TryWithDefer() (c []byte, e error): %w", e)
 		}
 	}()
 

@@ -7,6 +7,7 @@ import (
 	"go/types"
 	"io"
 	"os"
+	"path"
 	"slices"
 	"strings"
 
@@ -16,6 +17,7 @@ import (
 
 const (
 	errorTypeName        = "error"
+	stdErrorsPkgPath     = "errors"
 	exceptionPkgPath     = "github.com/arcane-craft/sugar/syntax/exception"
 	tryFunName           = "Try"
 	catchFunName         = "Catch"
@@ -713,18 +715,18 @@ func GenErrHandler(errVar string, stmts []string) string {
 	return fmt.Sprintf("if %s != nil {\n%s\n}", errVar, strings.Join(stmts, "\n"))
 }
 
-func GenErrIsHandler(errVar string, errVals []string, stmts []string) string {
+func GenErrIsHandler(errorsPkg, errVar string, errVals []string, stmts []string) string {
 	var checks []string
 	for _, e := range errVals {
-		checks = append(checks, fmt.Sprintf("errors.Is(%s, %s)", errVar, e))
+		checks = append(checks, fmt.Sprintf("%sIs(%s, %s)", errorsPkg, errVar, e))
 	}
 	return fmt.Sprintf("if %s {\n%s\n}", strings.Join(checks, " || "), strings.Join(stmts, "\n"))
 }
 
-func GenErrAsHandler(errVar string, errTypes []string, stmts []string) string {
+func GenErrAsHandler(errorsPkg, errVar string, errTypes []string, stmts []string) string {
 	var checks []string
 	for _, t := range errTypes {
-		checks = append(checks, fmt.Sprintf("errors.As(%s, %s)", errVar, t))
+		checks = append(checks, fmt.Sprintf("%sAs(%s, %s)", errorsPkg, errVar, t))
 	}
 	return fmt.Sprintf("if %s {\n%s\n}", strings.Join(checks, " || "), strings.Join(stmts, "\n"))
 }
@@ -884,16 +886,19 @@ func genBlockCalls(file *os.File, block SyntaxBlock, proc func(c CallStmt) ([]st
 	return blockStmts, nil
 }
 
-func genErrHandlers(file *os.File, block *Catch, catchErrVar string, handlerStmts []string) ([]string, error) {
+func genErrHandlers(file *os.File, block *Catch, catchErrVar string, handlerStmts []string, errorsPkg string) ([]string, error) {
 	targets, err := lib.ReadExtentList(file, block.Targets)
 	if err != nil {
 		return nil, fmt.Errorf("lib.ReadExtentList() failed: %w", err)
+	}
+	if len(errorsPkg) > 0 {
+		errorsPkg += "."
 	}
 	var blockStmts []string
 	if block.Type == CatchError {
 		if len(targets) > 0 {
 			blockStmts = append(blockStmts,
-				GenErrIsHandler(catchErrVar, targets,
+				GenErrIsHandler(errorsPkg, catchErrVar, targets,
 					append([]string{
 						GenAssigneStmt([]string{block.Err}, ":=", []string{catchErrVar}),
 						GenAssigneStmt([]string{catchErrVar}, "=", []string{"nil"}),
@@ -912,7 +917,7 @@ func genErrHandlers(file *os.File, block *Catch, catchErrVar string, handlerStmt
 		}
 	} else if block.Type == CatchType {
 		blockStmts = append(blockStmts,
-			GenErrAsHandler(catchErrVar, targets,
+			GenErrAsHandler(errorsPkg, catchErrVar, targets,
 				append([]string{
 					GenAssigneStmt([]string{block.Err}, ":=", []string{catchErrVar}),
 					GenAssigneStmt([]string{catchErrVar}, "=", []string{"nil"}),
@@ -1011,7 +1016,12 @@ func (*Translator) Generate(info *lib.FileInfo[*ExceptionSyntax], writer io.Writ
 							return nil, err
 						}
 						handlerStmts = append(handlerStmts, GenGotoStmt(finallyLabel))
-						handlerStmts, err = genErrHandlers(file, block, catchErrVar, handlerStmts)
+						errorsPkg, ok := info.Imports[stdErrorsPkgPath]
+						if !ok {
+							errorsPkg = lib.GenPkgName(path.Base(stdErrorsPkgPath), stdErrorsPkgPath)
+							addImports[stdErrorsPkgPath] = errorsPkg
+						}
+						handlerStmts, err = genErrHandlers(file, block, catchErrVar, handlerStmts, errorsPkg)
 						if err != nil {
 							return nil, err
 						}

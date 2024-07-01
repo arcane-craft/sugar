@@ -3,12 +3,13 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
 
 	. "github.com/arcane-craft/sugar/syntax/exception"
+
+	errors_JA9DS5M0SK "errors"
 )
 
 func main() {
@@ -44,7 +45,7 @@ func Run() ([]byte, error) {
 		}
 	CatchTBC0MLSJ4S:
 		{
-			if errors.As(catchErr4K9AHBGELS, *os.PathError) {
+			if errors_JA9DS5M0SK.As(catchErr4K9AHBGELS, *os.PathError) {
 				err := catchErr4K9AHBGELS
 				catchErr4K9AHBGELS = nil
 

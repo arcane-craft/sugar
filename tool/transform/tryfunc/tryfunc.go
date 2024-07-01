@@ -15,7 +15,7 @@ import (
 
 const (
 	errorTypeName  = "error"
-	tryFuncPkgName = "github.com/arcane-craft/sugar/syntax/tryfunc"
+	tryFuncPkgPath = "github.com/arcane-craft/sugar/syntax/tryfunc"
 	tryFuncName    = "Try"
 	stdFmtPkgPath  = "fmt"
 )
@@ -93,16 +93,16 @@ func (i *SyntaxInspector) findFuncResults(typ *ast.FuncType) (results []*FuncRes
 						})
 					}
 				} else {
-					varPrefix := "ret"
+					resultName := "_"
 					if idx == len(resultTypes.List)-1 {
-						varPrefix = "err"
+						resultName = lib.GenVarName("err", i.pkg.Fset.Position(elem.Type.Pos()).String())
 					}
 					results = append(results, &FuncResult{
 						Extent: &lib.Extent{
 							Start: i.pkg.Fset.Position(elem.Pos()),
 							End:   i.pkg.Fset.Position(elem.End()),
 						},
-						Name: lib.GenVarName(varPrefix, i.pkg.Fset.Position(elem.Type.Pos()).String()),
+						Name: resultName,
 						Type: &lib.Extent{
 							Start: i.pkg.Fset.Position(elem.Type.Pos()),
 							End:   i.pkg.Fset.Position(elem.Type.End()),
@@ -134,7 +134,7 @@ func (i *SyntaxInspector) inspectTryFuncCall(expr ast.Expr) (ast.Expr, int, bool
 			object := i.pkg.TypesInfo.ObjectOf(funcIdent)
 			if object != nil &&
 				object.Pkg() != nil &&
-				object.Pkg().Path() == tryFuncPkgName &&
+				object.Pkg().Path() == tryFuncPkgPath &&
 				len(call.Args) == 1 {
 				var retNum int
 				switch strings.TrimPrefix(funcIdent.Name, tryFuncName) {
@@ -312,7 +312,10 @@ func genErrHander(errVar string, retErrVar string) string {
 }
 
 func genErrWraper(retErrVar, fmtPkg, outerFunc string) string {
-	return fmt.Sprintf("defer func() {\n if %s != nil {\n %s = %s.Errorf(\"%s: %%w\") \n} \n}()", retErrVar, retErrVar, fmtPkg, outerFunc)
+	if len(fmtPkg) > 0 {
+		fmtPkg += "."
+	}
+	return fmt.Sprintf("defer func() {\n if %s != nil {\n %s = %sErrorf(\"%s: %%w\", %s) \n} \n}()", retErrVar, retErrVar, fmtPkg, outerFunc, retErrVar)
 }
 
 func (*Translator) Generate(info *lib.FileInfo[*TrySyntax], writer io.Writer) error {
@@ -340,7 +343,7 @@ func (*Translator) Generate(info *lib.FileInfo[*TrySyntax], writer io.Writer) er
 			}
 			fmtPkg, ok := info.Imports[stdFmtPkgPath]
 			if !ok {
-				fmtPkg = path.Base(stdFmtPkgPath)
+				fmtPkg = lib.GenPkgName(path.Base(stdFmtPkgPath), stdFmtPkgPath)
 				addImports[stdFmtPkgPath] = fmtPkg
 			}
 			blocks = append(blocks, &lib.ReplaceBlock{
