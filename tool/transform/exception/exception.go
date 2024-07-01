@@ -757,17 +757,17 @@ func GenIfStmt(cond string, stmt []string) string {
 	return fmt.Sprintf("if %s {\n %s \n}", cond, strings.Join(stmt, "\n"))
 }
 
-type Traslator struct{}
+type Translator struct{}
 
-func NewTraslator() *Traslator {
-	return &Traslator{}
+func NewTranslator() *Translator {
+	return &Translator{}
 }
 
-func (*Traslator) InpectTypes(p *packages.Package) []*lib.Extent {
+func (*Translator) InpectTypes(p *packages.Package) []*lib.Extent {
 	return nil
 }
 
-func (*Traslator) InspectSyntax(p *packages.Package, _ []*lib.Extent) lib.SyntaxInspector[*ExceptionSyntax] {
+func (*Translator) InspectSyntax(p *packages.Package, _ []*lib.Extent) lib.SyntaxInspector[*ExceptionSyntax] {
 	return NewExceptionSyntaxInspector(p)
 }
 
@@ -923,7 +923,7 @@ func genErrHandlers(file *os.File, block *Catch, catchErrVar string, handlerStmt
 	return blockStmts, nil
 }
 
-func (*Traslator) Generate(info *lib.FileInfo[*ExceptionSyntax], writer io.Writer) error {
+func (*Translator) Generate(info *lib.FileInfo[*ExceptionSyntax], writer io.Writer) error {
 	return lib.GenerateSyntax(info, writer, func(file *os.File, addImports map[string]string) ([]*lib.ReplaceBlock, error) {
 		var ret []*lib.ReplaceBlock
 		for _, s := range info.Syntax {

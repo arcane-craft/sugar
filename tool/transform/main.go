@@ -9,6 +9,7 @@ import (
 	"github.com/arcane-craft/sugar/tool/transform/exception"
 	"github.com/arcane-craft/sugar/tool/transform/lib"
 	"github.com/arcane-craft/sugar/tool/transform/question"
+	"github.com/arcane-craft/sugar/tool/transform/tryfunc"
 )
 
 func main() {
@@ -33,15 +34,20 @@ func main() {
 		return
 	}
 
-	err := lib.TranslateSyntax(ctx, rootDir, true, exception.NewTraslator())
+	err := lib.TranslateSyntax(ctx, rootDir, true, exception.NewTranslator())
 	if err != nil {
 		fmt.Println("translate exception syntax failed:", err)
 		return
 	}
 
-	err = lib.TranslateSyntax(ctx, rootDir, false, question.NewTraslator())
+	err = lib.TranslateSyntax(ctx, rootDir, false, question.NewTranslator())
 	if err != nil {
 		fmt.Println("translate question syntax failed:", err)
+		return
+	}
+	err = lib.TranslateSyntax(ctx, rootDir, false, tryfunc.NewTranslator())
+	if err != nil {
+		fmt.Println("translate tryfunc syntax failed:", err)
 		return
 	}
 

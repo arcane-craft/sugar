@@ -17,9 +17,9 @@ func main() {
 }
 
 func ResultQuestion() Result[string] {
-	file := FromR1Err(os.Open("hello.txt")).Q()
+	file := From(os.Open("hello.txt")).Q()
 	defer file.Close()
-	content := FromR1Err(io.ReadAll(file)).Q()
+	content := From(io.ReadAll(file)).Q()
 	return Ok(string(content))
 }
 

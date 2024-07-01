@@ -12,7 +12,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-type SyntaxTraslator[Type, Syntax interface {
+type SyntaxTranslator[Type, Syntax interface {
 	fmt.Stringer
 	comparable
 }] interface {
@@ -26,7 +26,7 @@ func TranslateSyntax[Type, Syntax interface {
 	comparable
 }](
 	ctx context.Context, rootDir string, firstRun bool,
-	traslator SyntaxTraslator[Type, Syntax],
+	translator SyntaxTranslator[Type, Syntax],
 ) error {
 
 	var finished bool
@@ -41,17 +41,17 @@ func TranslateSyntax[Type, Syntax interface {
 		}
 		var instTypes []Type
 		for _, p := range pkgs {
-			instTypes = append(instTypes, traslator.InpectTypes(p)...)
+			instTypes = append(instTypes, translator.InpectTypes(p)...)
 			for path, dep := range p.Imports {
 				if p.PkgPath != path {
-					instTypes = append(instTypes, traslator.InpectTypes(dep)...)
+					instTypes = append(instTypes, translator.InpectTypes(dep)...)
 				}
 			}
 		}
 
 		var totalFiles []*FileInfo[Syntax]
 		for _, p := range pkgs {
-			files := NewPackageInspector(p, traslator.InspectSyntax(p, instTypes)).Inspect()
+			files := NewPackageInspector(p, translator.InspectSyntax(p, instTypes)).Inspect()
 			for _, info := range files {
 				func() {
 					ext := filepath.Ext(info.Path)
@@ -68,7 +68,7 @@ func TranslateSyntax[Type, Syntax interface {
 					}
 					defer file.Close()
 
-					err = traslator.Generate(info, file)
+					err = translator.Generate(info, file)
 					if err != nil {
 						fmt.Println("generate code of", info.Path, "failed:", err)
 						return

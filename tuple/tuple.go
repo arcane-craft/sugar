@@ -17,6 +17,10 @@ func (p Pair[A, B]) Second() B {
 	return p.b
 }
 
+func (p Pair[A, B]) Unwrap() (A, B) {
+	return p.a, p.b
+}
+
 type Triple[A, B, C any] struct {
 	a A
 	b B
@@ -37,4 +41,8 @@ func (t Triple[A, B, C]) Second() B {
 
 func (t Triple[A, B, C]) Third() C {
 	return t.c
+}
+
+func (t Triple[A, B, C]) Unwrap() (A, B, C) {
+	return t.a, t.b, t.c
 }

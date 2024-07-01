@@ -18,18 +18,18 @@ func main() {
 }
 
 func ResultQuestion() Result[string] {
-	varRB3TCFLMUS := FromR1Err(os.Open("hello.txt"))
-	if varRB3TCFLMUS.IsErr() {
-		return Err[string](fmt.Errorf("func ResultQuestion() github.com/arcane-craft/sugar/result.Result[string]: %w", varRB3TCFLMUS.UnwrapErr()))
+	var07QIGRQF8K := From(os.Open("hello.txt"))
+	if var07QIGRQF8K.IsErr() {
+		return Err[string](fmt.Errorf("func ResultQuestion() github.com/arcane-craft/sugar/result.Result[string]: %w", var07QIGRQF8K.UnwrapErr()))
 	}
-	file := varRB3TCFLMUS.Unwrap()
+	file := var07QIGRQF8K.Unwrap()
 
 	defer file.Close()
-	varO5PQ7UU4G4 := FromR1Err(io.ReadAll(file))
-	if varO5PQ7UU4G4.IsErr() {
-		return Err[string](fmt.Errorf("func ResultQuestion() github.com/arcane-craft/sugar/result.Result[string]: %w", varO5PQ7UU4G4.UnwrapErr()))
+	var60KDCIE178 := From(io.ReadAll(file))
+	if var60KDCIE178.IsErr() {
+		return Err[string](fmt.Errorf("func ResultQuestion() github.com/arcane-craft/sugar/result.Result[string]: %w", var60KDCIE178.UnwrapErr()))
 	}
-	content := varO5PQ7UU4G4.Unwrap()
+	content := var60KDCIE178.Unwrap()
 
 	return Ok(string(content))
 }

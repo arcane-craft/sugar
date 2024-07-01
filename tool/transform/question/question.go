@@ -426,20 +426,20 @@ func GenerateQuestionSyntax(info *lib.FileInfo[*QuestionSyntax], writer io.Write
 	})
 }
 
-type Traslator struct{}
+type Translator struct{}
 
-func NewTraslator() *Traslator {
-	return &Traslator{}
+func NewTranslator() *Translator {
+	return &Translator{}
 }
 
-func (*Traslator) InpectTypes(p *packages.Package) []*QuestionInstanceType {
+func (*Translator) InpectTypes(p *packages.Package) []*QuestionInstanceType {
 	return NewQuestionTypeInspector(p).Inspect()
 }
 
-func (*Traslator) InspectSyntax(p *packages.Package, instTypes []*QuestionInstanceType) lib.SyntaxInspector[*QuestionSyntax] {
+func (*Translator) InspectSyntax(p *packages.Package, instTypes []*QuestionInstanceType) lib.SyntaxInspector[*QuestionSyntax] {
 	return NewQuestionSyntaxInspector(p, instTypes)
 }
 
-func (*Traslator) Generate(info *lib.FileInfo[*QuestionSyntax], writer io.Writer) error {
+func (*Translator) Generate(info *lib.FileInfo[*QuestionSyntax], writer io.Writer) error {
 	return GenerateQuestionSyntax(info, writer)
 }
