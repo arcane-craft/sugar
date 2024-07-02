@@ -12,6 +12,10 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+type Program interface {
+	Run(ctx context.Context, rootDir string, firstRun bool) error
+}
+
 type SyntaxTranslator[Type, Syntax interface {
 	fmt.Stringer
 	comparable

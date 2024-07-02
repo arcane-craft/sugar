@@ -1,6 +1,7 @@
 package tryfunc
 
 import (
+	"context"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -275,12 +276,7 @@ func (i *SyntaxInspector) Inspect(node ast.Node, _ []ast.Node) *TrySyntax {
 	return syntax
 }
 
-type Translator struct {
-}
-
-func NewTranslator() *Translator {
-	return &Translator{}
-}
+type Translator struct{}
 
 func (*Translator) InpectTypes(p *packages.Package) []*lib.Extent {
 	return nil
@@ -408,4 +404,12 @@ func (*Translator) Generate(info *lib.FileInfo[*TrySyntax], writer io.Writer) er
 		}
 		return blocks, nil
 	})
+}
+
+func (t *Translator) Run(ctx context.Context, rootDir string, firstRun bool) error {
+	err := lib.TranslateSyntax(ctx, rootDir, firstRun, t)
+	if err != nil {
+		return fmt.Errorf("translate tryfunc syntax failed: %w", err)
+	}
+	return nil
 }

@@ -1,6 +1,7 @@
 package exception
 
 import (
+	"context"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -761,10 +762,6 @@ func GenIfStmt(cond string, stmt []string) string {
 
 type Translator struct{}
 
-func NewTranslator() *Translator {
-	return &Translator{}
-}
-
 func (*Translator) InpectTypes(p *packages.Package) []*lib.Extent {
 	return nil
 }
@@ -1090,4 +1087,12 @@ func (*Translator) Generate(info *lib.FileInfo[*ExceptionSyntax], writer io.Writ
 		}
 		return ret, nil
 	})
+}
+
+func (t *Translator) Run(ctx context.Context, rootDir string, firstRun bool) error {
+	err := lib.TranslateSyntax(ctx, rootDir, firstRun, t)
+	if err != nil {
+		return fmt.Errorf("translate exception syntax failed: %w", err)
+	}
+	return nil
 }

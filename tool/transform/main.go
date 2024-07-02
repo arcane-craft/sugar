@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 
-	"github.com/arcane-craft/sugar/tool/transform/exception"
 	"github.com/arcane-craft/sugar/tool/transform/lib"
-	"github.com/arcane-craft/sugar/tool/transform/question"
-	"github.com/arcane-craft/sugar/tool/transform/tryfunc"
 )
 
 func main() {
@@ -25,6 +23,10 @@ func main() {
 	} else {
 		rootDir = os.Args[1]
 	}
+	names := strings.Split(os.Getenv("SUGAR_AVAILABLE_SYNTAX"), ",")
+	if len(names) == 1 && names[0] == "" {
+		names = DefaultSyntax()
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -34,21 +36,12 @@ func main() {
 		return
 	}
 
-	err := lib.TranslateSyntax(ctx, rootDir, true, exception.NewTranslator())
-	if err != nil {
-		fmt.Println("translate exception syntax failed:", err)
-		return
-	}
-
-	err = lib.TranslateSyntax(ctx, rootDir, false, question.NewTranslator())
-	if err != nil {
-		fmt.Println("translate question syntax failed:", err)
-		return
-	}
-	err = lib.TranslateSyntax(ctx, rootDir, false, tryfunc.NewTranslator())
-	if err != nil {
-		fmt.Println("translate tryfunc syntax failed:", err)
-		return
+	for idx, p := range Programs(names) {
+		err := p.Run(ctx, rootDir, idx == 0)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
 	}
 
 	if err := lib.SetProdBuildTags(ctx, rootDir); err != nil {

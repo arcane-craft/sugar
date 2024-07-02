@@ -1,6 +1,7 @@
 package question
 
 import (
+	"context"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -487,10 +488,6 @@ func GenerateQuestionSyntax(info *lib.FileInfo[*QuestionSyntax], writer io.Write
 
 type Translator struct{}
 
-func NewTranslator() *Translator {
-	return &Translator{}
-}
-
 func (*Translator) InpectTypes(p *packages.Package) []*QuestionInstanceType {
 	return NewQuestionTypeInspector(p).Inspect()
 }
@@ -501,4 +498,12 @@ func (*Translator) InspectSyntax(p *packages.Package, instTypes []*QuestionInsta
 
 func (*Translator) Generate(info *lib.FileInfo[*QuestionSyntax], writer io.Writer) error {
 	return GenerateQuestionSyntax(info, writer)
+}
+
+func (t *Translator) Run(ctx context.Context, rootDir string, firstRun bool) error {
+	err := lib.TranslateSyntax(ctx, rootDir, firstRun, t)
+	if err != nil {
+		return fmt.Errorf("translate question syntax failed: %w", err)
+	}
+	return nil
 }
