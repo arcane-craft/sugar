@@ -326,15 +326,12 @@ func GenAssginStmt(assignVar, assignToken, call string) string {
 	return fmt.Sprintf("%s %s %s\n", assignVar, assignToken, call)
 }
 
-func GenErrorHandler(resultPkg, fmtPkg, resultVar, retType, outerFn string) string {
+func GenErrorHandler(resultPkg, resultVar, retType string) string {
 	if len(resultPkg) > 0 {
 		resultPkg += "."
 	}
-	if len(fmtPkg) > 0 {
-		fmtPkg += "."
-	}
-	return fmt.Sprintf("if %s.IsErr() {\nreturn %sErr[%s](%sErrorf(\"%s: %%w\", %s.UnwrapErr()))\n}\n",
-		resultVar, resultPkg, retType, fmtPkg, outerFn, resultVar)
+	return fmt.Sprintf("if %s.IsErr() {\nreturn %sErr[%s](%s.UnwrapErr())\n}\n",
+		resultVar, resultPkg, retType, resultVar)
 }
 
 func GenUnwrapStmt(assignVar, assignToken, receiverVar string) string {
@@ -379,12 +376,7 @@ func GenerateQuestionSyntax(info *lib.FileInfo[*QuestionSyntax], writer io.Write
 						resultPkg = lib.GenPkgName(path.Base(resultPkgPath), resultPkgPath)
 						addImports[resultPkgPath] = resultPkg
 					}
-					fmtPkg, ok := info.Imports[stdFmtPkgPath]
-					if !ok {
-						fmtPkg = lib.GenPkgName(path.Base(stdFmtPkgPath), stdFmtPkgPath)
-						addImports[stdFmtPkgPath] = fmtPkg
-					}
-					result += GenErrorHandler(resultPkg, fmtPkg, receiverVar, retType, syntax.OuterFn)
+					result += GenErrorHandler(resultPkg, receiverVar, retType)
 				} else {
 					optionPkg, ok := info.Imports[optionPkgPath]
 					if !ok {
@@ -417,12 +409,7 @@ func GenerateQuestionSyntax(info *lib.FileInfo[*QuestionSyntax], writer io.Write
 						resultPkg = lib.GenPkgName(path.Base(resultPkgPath), resultPkgPath)
 						addImports[resultPkgPath] = resultPkg
 					}
-					fmtPkg, ok := info.Imports[stdFmtPkgPath]
-					if !ok {
-						fmtPkg = lib.GenPkgName(path.Base(stdFmtPkgPath), stdFmtPkgPath)
-						addImports[stdFmtPkgPath] = fmtPkg
-					}
-					result += GenErrorHandler(resultPkg, fmtPkg, receiverVar, retType, syntax.OuterFn)
+					result += GenErrorHandler(resultPkg, receiverVar, retType)
 				} else {
 					optionPkg, ok := info.Imports[optionPkgPath]
 					if !ok {
@@ -462,12 +449,7 @@ func GenerateQuestionSyntax(info *lib.FileInfo[*QuestionSyntax], writer io.Write
 						resultPkg = lib.GenPkgName(path.Base(resultPkgPath), resultPkgPath)
 						addImports[resultPkgPath] = resultPkg
 					}
-					fmtPkg, ok := info.Imports[stdFmtPkgPath]
-					if !ok {
-						fmtPkg = lib.GenPkgName(path.Base(stdFmtPkgPath), stdFmtPkgPath)
-						addImports[stdFmtPkgPath] = fmtPkg
-					}
-					result += GenErrorHandler(resultPkg, fmtPkg, receiverVar, retType, syntax.OuterFn)
+					result += GenErrorHandler(resultPkg, receiverVar, retType)
 				} else {
 					optionPkg, ok := info.Imports[optionPkgPath]
 					if !ok {

@@ -1,6 +1,9 @@
 package errorx
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 func IsIn(err error, targets ...error) bool {
 	var ret bool
@@ -22,4 +25,10 @@ func AsIn(err error, targets ...any) bool {
 		}
 	}
 	return ret
+}
+
+func Wrap(desc string, err *error) {
+	if err != nil && *err != nil {
+		*err = fmt.Errorf("%s %w", desc, *err)
+	}
 }

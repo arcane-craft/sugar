@@ -16,12 +16,6 @@ func main() {
 }
 
 func TryOnly() (_ []byte, err9EIH73OK48 error) {
-	defer func() {
-		if err9EIH73OK48 != nil {
-			err9EIH73OK48 = fmt.Errorf("func TryOnly() ([]byte, error): %w", err9EIH73OK48)
-		}
-	}()
-
 	file, errCEGNQ31MMK := os.Open("hello.txt")
 	if errCEGNQ31MMK != nil {
 		err9EIH73OK48 = errCEGNQ31MMK
@@ -37,12 +31,6 @@ func TryOnly() (_ []byte, err9EIH73OK48 error) {
 }
 
 func TryWithDefer() (c []byte, e error) {
-	defer func() {
-		if e != nil {
-			e = fmt.Errorf("func TryWithDefer() (c []byte, e error): %w", e)
-		}
-	}()
-
 	defer func() {
 		if errors.As(e, new(*os.PathError)) {
 			fmt.Println("invalid file path")

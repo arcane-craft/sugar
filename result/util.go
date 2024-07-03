@@ -1,6 +1,8 @@
 package result
 
 import (
+	"fmt"
+
 	"github.com/arcane-craft/sugar"
 	"github.com/arcane-craft/sugar/tuple"
 )
@@ -31,4 +33,12 @@ func From3[A, B, C any](r1 A, r2 B, r3 C, e error) Result[tuple.Triple[A, B, C]]
 		return Err[tuple.Triple[A, B, C]](e)
 	}
 	return Ok(tuple.NewTriple(r1, r2, r3))
+}
+
+func WrapErr[T any](desc string, r Result[T]) {
+	r.Mutate(func(_ *T, err *error) {
+		if err != nil && *err != nil {
+			*err = fmt.Errorf("%s %w", desc, *err)
+		}
+	})
 }

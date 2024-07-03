@@ -7,7 +7,6 @@ import (
 	"go/token"
 	"io"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/arcane-craft/sugar/tool/transform/lib"
@@ -337,23 +336,12 @@ func (*Translator) Generate(info *lib.FileInfo[*TrySyntax], writer io.Writer) er
 					retErrVar = ret.Name
 				}
 			}
-			fmtPkg, ok := info.Imports[stdFmtPkgPath]
-			if !ok {
-				fmtPkg = lib.GenPkgName(path.Base(stdFmtPkgPath), stdFmtPkgPath)
-				addImports[stdFmtPkgPath] = fmtPkg
-			}
 			blocks = append(blocks, &lib.ReplaceBlock{
 				Old: lib.Extent{
 					Start: resultStart,
 					End:   resultEnd,
 				},
 				New: genFuncResultType(resultTypeElems),
-			}, &lib.ReplaceBlock{
-				Old: lib.Extent{
-					Start: syntax.Start,
-					End:   syntax.Start,
-				},
-				New: fmt.Sprintf("\n%s\n", genErrWraper(retErrVar, fmtPkg, syntax.OuterFunc)),
 			})
 
 			for _, stmt := range syntax.Stmts {
