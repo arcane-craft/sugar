@@ -17,7 +17,6 @@ type Result[T any] interface {
 	UnwrapOr(T) T
 	Map(func(T) T) Result[T]
 	MapErr(func(error) error) Result[T]
-	Mutate(func(*T, *error))
 
 	question.Question[T]
 }
@@ -69,11 +68,7 @@ func (r rOk[T]) Map(f func(T) T) Result[T] {
 }
 
 func (r rOk[T]) MapErr(_ func(error) error) Result[T] {
-	return &r
-}
-
-func (r *rOk[T]) Mutate(f func(*T, *error)) {
-	f(&r.v, nil)
+	return r
 }
 
 type rErr[T any] struct {
@@ -119,21 +114,17 @@ func (rErr[T]) UnwrapOr(def T) T {
 }
 
 func (r rErr[T]) Map(_ func(T) T) Result[T] {
-	return &r
+	return r
 }
 
 func (r rErr[T]) MapErr(f func(error) error) Result[T] {
 	return Err[T](f(r.v))
 }
 
-func (r *rErr[T]) Mutate(f func(*T, *error)) {
-	f(nil, &r.v)
-}
-
 func Ok[T any](v T) Result[T] {
-	return &rOk[T]{v: v}
+	return rOk[T]{v: v}
 }
 
 func Err[T any](e error) Result[T] {
-	return &rErr[T]{v: e}
+	return rErr[T]{v: e}
 }
