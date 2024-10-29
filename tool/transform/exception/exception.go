@@ -1085,6 +1085,11 @@ func (*Translator) Generate(info *lib.FileInfo[*ExceptionSyntax], writer io.Writ
 				New: GenBlock(stmts),
 			})
 		}
+		for path := range addImports {
+			if path == exceptionPkgPath {
+				delete(addImports, path)
+			}
+		}
 		return ret, nil
 	})
 }

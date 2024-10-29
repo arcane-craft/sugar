@@ -183,6 +183,11 @@ func (*Translator) Generate(info *lib.FileInfo[*PredefSyntax], writer io.Writer)
 				New: genStringLit(syntax.Ident.Value),
 			})
 		}
+		for path := range addImports {
+			if path == predefPkgPath {
+				delete(addImports, path)
+			}
+		}
 		return blocks, nil
 	})
 }

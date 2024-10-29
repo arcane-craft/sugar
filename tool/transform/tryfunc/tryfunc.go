@@ -390,6 +390,11 @@ func (*Translator) Generate(info *lib.FileInfo[*TrySyntax], writer io.Writer) er
 				}
 			}
 		}
+		for path := range addImports {
+			if path == tryFuncPkgPath {
+				delete(addImports, path)
+			}
+		}
 		return blocks, nil
 	})
 }
