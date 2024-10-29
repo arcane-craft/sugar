@@ -8,6 +8,7 @@ import (
 	"os"
 
 	. "github.com/arcane-craft/sugar/option"
+
 	. "github.com/arcane-craft/sugar/result"
 )
 
@@ -64,11 +65,11 @@ func (o JSONObject) Get(key string) Option[JSONValue] {
 }
 
 func OptionQuestion() Option[string] {
-	varKJGQSVLO3O := Deocde([]byte(`{"hello":"world"}`))
-	if varKJGQSVLO3O.IsNone() {
+	varGRIG5FKNGC := Deocde([]byte(`{"hello":"world"}`))
+	if varGRIG5FKNGC.IsNone() {
 		return None[string]()
 	}
-	var4OEKS2K7VS := varKJGQSVLO3O.Unwrap().Get("hello")
+	var4OEKS2K7VS := varGRIG5FKNGC.Unwrap().Get("hello")
 	if var4OEKS2K7VS.IsNone() {
 		return None[string]()
 	}

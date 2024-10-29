@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	. "github.com/arcane-craft/sugar/syntax/tryfunc"
 )
 
 func main() {

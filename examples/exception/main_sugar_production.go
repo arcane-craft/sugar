@@ -7,8 +7,6 @@ import (
 	"io"
 	"os"
 
-	. "github.com/arcane-craft/sugar/syntax/exception"
-
 	errors_JA9DS5M0SK "errors"
 )
 

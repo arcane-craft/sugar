@@ -2,11 +2,7 @@
 
 package main
 
-import (
-	"fmt"
-
-	. "github.com/arcane-craft/sugar/syntax/predef"
-)
+import "fmt"
 
 func main() {
 	TestIdentifier()

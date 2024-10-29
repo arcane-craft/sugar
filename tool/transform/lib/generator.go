@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"slices"
 	"strings"
 )
@@ -77,6 +78,12 @@ func GenerateSyntax[Syntax interface {
 	defer file.Close()
 
 	addImports := make(map[string]string)
+	for p, n := range info.Imports {
+		if path.Base(p) == n {
+			n = " "
+		}
+		addImports[p] = n
+	}
 	blocks, err := proc(file, addImports)
 	if err != nil {
 		return err
@@ -89,18 +96,32 @@ func GenerateSyntax[Syntax interface {
 	if _, err := writer.Write([]byte(GenTmpBuildTags(true))); err != nil {
 		return fmt.Errorf("writer.Write() failed: %w", err)
 	}
-	nextOffset := info.ImportExtent.End.Offset + 1
+	nextOffset := int64(info.ImportExtent.Start.Offset)
 	if info.BuildTag != nil {
 		_, err := file.Seek(int64(info.BuildTag.End.Offset+2), io.SeekStart)
 		if err != nil {
 			return fmt.Errorf("file.Seek() failed: %w", err)
 		}
-		nextOffset = info.ImportExtent.End.Offset - info.BuildTag.End.Offset - 1
+		nextOffset = int64(info.ImportExtent.Start.Offset - info.BuildTag.End.Offset - 1)
 	}
-	if _, err := io.CopyN(writer, file, int64(nextOffset)); err != nil {
+	if _, err := io.CopyN(writer, file, nextOffset); err != nil {
 		return fmt.Errorf("io.CopyN() failed: %w", err)
 	}
-	for p, n := range addImports {
+	if _, err := file.Seek(int64(info.ImportExtent.End.Offset+1), io.SeekStart); err != nil {
+		return fmt.Errorf("file.Seek() failed: %w", err)
+	}
+	var importPaths []string
+	for p := range addImports {
+		importPaths = append(importPaths, p)
+	}
+	slices.SortFunc(importPaths, func(a, b string) int {
+		if len(a) == len(b) {
+			return strings.Compare(a, b)
+		}
+		return len(a) - len(b)
+	})
+	for _, p := range importPaths {
+		n := addImports[p]
 		if _, err := writer.Write([]byte(GenNewLine() + GenImport(n, p))); err != nil {
 			return fmt.Errorf("writer.Write() failed: %w", err)
 		}
